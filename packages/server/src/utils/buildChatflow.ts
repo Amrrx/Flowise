@@ -2,7 +2,7 @@ import { Request } from 'express'
 import * as path from 'path'
 import { DataSource } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
-import { omit } from 'lodash'
+import { omit, cloneDeep } from 'lodash'
 import {
     IFileUpload,
     convertSpeechToText,
@@ -818,7 +818,14 @@ export const executeFlow = async ({
                         sessionId,
                         chatId,
                         input: question,
-                        rawOutput: resultText,
+                        postProcessing: {
+                            rawOutput: resultText,
+                            chatHistory: cloneDeep(chatHistory),
+                            sourceDocuments: result?.sourceDocuments ? cloneDeep(result.sourceDocuments) : undefined,
+                            usedTools: result?.usedTools ? cloneDeep(result.usedTools) : undefined,
+                            artifacts: result?.artifacts ? cloneDeep(result.artifacts) : undefined,
+                            fileAnnotations: result?.fileAnnotations ? cloneDeep(result.fileAnnotations) : undefined
+                        },
                         appDataSource,
                         databaseEntities,
                         workspaceId,
@@ -967,7 +974,7 @@ const checkIfStreamValid = async (
 }
 
 /**
- * Build/Data Preperation for execute function
+ * Build/Data Preparation for execute function
  * @param {Request} req
  * @param {boolean} isInternal
  */
@@ -1038,9 +1045,7 @@ export const utilBuildChatflow = async (req: Request, isInternal: boolean = fals
         const orgId = org.id
         organizationId = orgId
         const subscriptionId = org.subscriptionId as string
-
-        const subscriptionDetails = await appServer.usageCacheManager.getSubscriptionDataFromCache(subscriptionId)
-        const productId = subscriptionDetails?.productId || ''
+        const productId = await appServer.identityManager.getProductIdFromSubscription(subscriptionId)
 
         await checkPredictions(orgId, subscriptionId, appServer.usageCacheManager)
 
