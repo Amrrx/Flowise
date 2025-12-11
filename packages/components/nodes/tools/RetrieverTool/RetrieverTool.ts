@@ -7,6 +7,7 @@ import { getBaseClasses, resolveFlowObjValue, parseWithTypeConversion } from '..
 import { SOURCE_DOCUMENTS_PREFIX } from '../../../src/agents'
 import { RunnableConfig } from '@langchain/core/runnables'
 import { VectorStoreRetriever } from '@langchain/core/vectorstores'
+import { enhanceRetrievalResults } from '../../../src/ragEnhancement'
 
 const howToUse = `Add additional filters to vector store. You can also filter with flow config, including the current "state":
 - \`$flow.sessionId\`
@@ -194,6 +195,8 @@ class Retriever_Tools implements INode {
         const flow = { chatflowId: options.chatflowid }
 
         const func = async ({ input }: { input: string }, _?: CallbackManagerForToolRun, flowConfig?: IFlowConfig) => {
+            console.log(`[RetrieverTool] *** TOOL CALLED *** input="${input}"`)
+
             if (retrieverToolMetadataFilter) {
                 const flowObj = flowConfig
 
@@ -204,7 +207,17 @@ class Retriever_Tools implements INode {
                 const vectorStore = (retriever as VectorStoreRetriever<any>).vectorStore
                 vectorStore.filter = newMetadataFilter
             }
-            const docs = await retriever.invoke(input)
+            let docs = await retriever.invoke(input)
+
+            // RAG Enhancement: Apply BM25 + reranking if configured
+            // Extract document store ID from retriever (set by DocumentStoreVS)
+            const storeId = (retriever as any).documentStoreId as string | undefined
+            console.log(`[RetrieverTool] RAG Enhancement check: storeId=${storeId}, docs=${docs.length}`)
+
+            if (storeId) {
+                docs = await enhanceRetrievalResults(docs, input, storeId)
+            }
+
             const content = docs.map((doc) => doc.pageContent).join('\n\n')
             const sourceDocuments = JSON.stringify(docs)
             return returnSourceDocuments ? content + SOURCE_DOCUMENTS_PREFIX + sourceDocuments : content

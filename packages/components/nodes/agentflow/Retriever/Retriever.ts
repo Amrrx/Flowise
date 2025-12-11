@@ -9,6 +9,7 @@ import {
 } from '../../../src/Interface'
 import { updateFlowState } from '../utils'
 import { processTemplateVariables } from '../../../src/utils'
+import { enhanceRetrievalResults } from '../../../src/ragEnhancement'
 import { DataSource } from 'typeorm'
 import { BaseRetriever } from '@langchain/core/retrievers'
 import { Document } from '@langchain/core/documents'
@@ -149,10 +150,12 @@ class Retriever_Agentflow implements INode {
 
         // Extract knowledge
         let docs: Document[] = []
+        let lastStoreId: string | undefined
         const knowledgeBases = nodeData.inputs?.retrieverKnowledgeDocumentStores as IKnowledgeBase[]
         if (knowledgeBases && knowledgeBases.length > 0) {
             for (const knowledgeBase of knowledgeBases) {
                 const [storeId, _] = knowledgeBase.documentStore.split(':')
+                lastStoreId = storeId
 
                 const docStoreVectorInstanceFilePath = options.componentNodes['documentStoreVS'].filePath as string
                 const docStoreVectorModule = await import(docStoreVectorInstanceFilePath)
@@ -174,6 +177,12 @@ class Retriever_Agentflow implements INode {
 
                 docs = await docStoreVectorInstance.invoke(retrieverQuery || input, { signal: abortController?.signal })
             }
+        }
+
+        // RAG Enhancement: Apply BM25 + reranking if configured
+        console.log(`[Retriever] Before RAG enhancement: lastStoreId=${lastStoreId}, docs=${docs.length}`)
+        if (lastStoreId && docs.length > 0) {
+            docs = await enhanceRetrievalResults(docs, retrieverQuery || input, lastStoreId)
         }
 
         const docsText = docs.map((doc) => doc.pageContent).join('\n')
