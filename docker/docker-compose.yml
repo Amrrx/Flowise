@@ -133,6 +133,10 @@ services:
             - CUSTOM_MCP_PROTOCOL=${CUSTOM_MCP_PROTOCOL}
             - HTTP_DENY_LIST=${HTTP_DENY_LIST}
             - TRUST_PROXY=${TRUST_PROXY}
+
+            # Extra
+            - DOCUMENT_PROCESSOR_URL=http://localhost:8001  # or your Python service URL
+            - RAG_ENHANCEMENT_ENABLED=true
         ports:
             - '${PORT}:${PORT}'
         healthcheck:

@@ -111,6 +111,10 @@ class DocStore_VectorStores implements INode {
         if (!retrieverOrVectorStore) {
             return { error: 'Failed to create vectorStore' }
         }
+
+        // Attach document store ID for RAG enhancement
+        retrieverOrVectorStore.documentStoreId = selectedStore
+
         return retrieverOrVectorStore
     }
 }
