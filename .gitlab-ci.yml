@@ -1,0 +1,63 @@
+stages:
+  - build
+  - push
+
+variables:
+  # GitLab Container Registry
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+  # Or use Docker Hub: docker.io/yourusername/flowise
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# Build Docker image
+build:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    # Build image with cache
+    - docker build --pull --cache-from $IMAGE_NAME:latest -t $IMAGE_NAME:$CI_COMMIT_SHORT_SHA -t $IMAGE_NAME:latest .
+  after_script:
+    - docker logout $CI_REGISTRY
+  only:
+    - main
+    - develop
+    - tags
+
+# Push to registry
+push:
+  stage: push
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    # Rebuild (uses cache from previous stage)
+    - docker build --pull --cache-from $IMAGE_NAME:latest -t $IMAGE_NAME:$CI_COMMIT_SHORT_SHA -t $IMAGE_NAME:latest .
+
+    # Push commit-specific tag
+    - docker push $IMAGE_NAME:$CI_COMMIT_SHORT_SHA
+
+    # Push latest tag for main branch
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+        docker push $IMAGE_NAME:latest
+      fi
+
+    # Push version tag for git tags
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        docker tag $IMAGE_NAME:$CI_COMMIT_SHORT_SHA $IMAGE_NAME:$CI_COMMIT_TAG
+        docker push $IMAGE_NAME:$CI_COMMIT_TAG
+      fi
+  after_script:
+    - docker logout $CI_REGISTRY
+  only:
+    - main
+    - tags
+  needs:
+    - build
