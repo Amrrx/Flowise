@@ -696,12 +696,14 @@ class Agent_Agentflow implements INode {
                 const nodeInstanceFilePath = options.componentNodes[tool.agentSelectedTool].filePath as string
                 const nodeModule = await import(nodeInstanceFilePath)
                 const newToolNodeInstance = new nodeModule.nodeClass()
+                const overrideMcpActions = options.overrideConfig?.mcpActions
                 const newNodeData = {
                     ...nodeData,
                     credential: toolConfig['FLOWISE_CREDENTIAL_ID'],
                     inputs: {
                         ...nodeData.inputs,
-                        ...toolConfig
+                        ...toolConfig,
+                        ...(overrideMcpActions ? { mcpActions: overrideMcpActions } : {})
                     }
                 }
                 const toolInstance = await newToolNodeInstance.init(newNodeData, '', options)

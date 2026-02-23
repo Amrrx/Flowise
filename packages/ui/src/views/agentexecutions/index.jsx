@@ -332,6 +332,20 @@ const AgentExecutions = () => {
                             <Grid sx={{ ml: -1 }} item xs={12} md={2}>
                                 <TextField
                                     fullWidth
+                                    label='Agentflow ID'
+                                    value={filters.agentflowId}
+                                    onChange={(e) => handleFilterChange('agentflowId', e.target.value)}
+                                    size='small'
+                                    sx={{
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: borderColor
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                            <Grid sx={{ ml: -1 }} item xs={12} md={2}>
+                                <TextField
+                                    fullWidth
                                     label='Session ID'
                                     value={filters.sessionId}
                                     onChange={(e) => handleFilterChange('sessionId', e.target.value)}
