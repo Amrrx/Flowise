@@ -12,6 +12,9 @@ export interface IFlowHistory {
     version: number
     createdDate: Date
     workspaceId?: string
+    commitMessage?: string
+    authorId?: string
+    authorName?: string
 }
 
 @Entity()
@@ -32,6 +35,15 @@ export class FlowHistory implements IFlowHistory {
 
     @Column({ nullable: true, type: 'text' })
     changeDescription?: string
+
+    @Column({ nullable: true, type: 'text' })
+    commitMessage?: string
+
+    @Column({ nullable: true, type: 'text' })
+    authorId?: string
+
+    @Column({ nullable: true, type: 'text' })
+    authorName?: string
 
     @Column({ type: 'int' })
     version: number
