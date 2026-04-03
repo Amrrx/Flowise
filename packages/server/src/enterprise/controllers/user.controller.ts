@@ -4,6 +4,7 @@ import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { GeneralErrorMessage } from '../../utils/constants'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
 import { User } from '../database/entities/user.entity'
+import { AccountService } from '../services/account.service'
 import { UserErrorMessage, UserService } from '../services/user.service'
 
 export class UserController {
@@ -109,7 +110,6 @@ export class UserController {
 
     public async update(req: Request, res: Response, next: NextFunction) {
         try {
-            const userService = new UserService()
             const currentUser = req.user
             if (!currentUser) {
                 throw new InternalFlowiseError(StatusCodes.UNAUTHORIZED, UserErrorMessage.USER_NOT_FOUND)
@@ -118,8 +118,11 @@ export class UserController {
             if (currentUser.id !== id) {
                 throw new InternalFlowiseError(StatusCodes.FORBIDDEN, UserErrorMessage.USER_NOT_FOUND)
             }
-            const user = await userService.updateUser(req.body)
-            return res.status(StatusCodes.OK).json(user)
+            const accountService = new AccountService()
+            const result = await accountService.updateAuthenticatedUserProfile(currentUser.id, req.body, (userId, newEmail) =>
+                accountService.syncStripeCustomerEmailAfterUserEmailChange(userId, newEmail)
+            )
+            return res.status(StatusCodes.OK).json(result)
         } catch (error) {
             next(error)
         }
