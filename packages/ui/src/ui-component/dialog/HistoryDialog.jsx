@@ -22,7 +22,7 @@ import {
 import { useTheme } from '@mui/material/styles'
 
 // icons
-import { IconHistory, IconRestore, IconTrash, IconEye, IconX } from '@tabler/icons-react'
+import { IconHistory, IconRestore, IconTrash, IconEye, IconX, IconTag, IconRocket } from '@tabler/icons-react'
 
 // project imports
 import useConfirm from '@/hooks/useConfirm'
@@ -32,6 +32,8 @@ import { enqueueSnackbar as enqueueSnackbarAction } from '@/store/actions'
 
 // API
 import historyApi from '@/api/history'
+import flowTagsApi from '@/api/flowTags'
+import chatflowsApi from '@/api/chatflows'
 
 // utils
 import moment from 'moment'
@@ -145,6 +147,38 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
         }
     }
 
+    const handleTag = async (item) => {
+        const tagName = window.prompt('Tag name (e.g., release-2026-04):')
+        if (!tagName) return
+        try {
+            await flowTagsApi.createTag(item.id, tagName)
+            enqueueSnackbar({
+                message: `Tagged v${item.version} as "${tagName}"`,
+                options: { variant: 'success' }
+            })
+        } catch (error) {
+            enqueueSnackbar({
+                message: `Tag failed: ${error?.response?.data?.message || error.message}`,
+                options: { variant: 'error' }
+            })
+        }
+    }
+
+    const handlePublishVersion = async (item) => {
+        try {
+            await chatflowsApi.publishChatflow(entityId, item.version)
+            enqueueSnackbar({
+                message: `Published v${item.version}`,
+                options: { variant: 'success' }
+            })
+        } catch (error) {
+            enqueueSnackbar({
+                message: `Publish failed: ${error?.response?.data?.message || error.message}`,
+                options: { variant: 'error' }
+            })
+        }
+    }
+
     const handleViewSnapshot = async (historyItem) => {
         try {
             const response = await historyApi.getSnapshotById(historyItem.id)
@@ -201,9 +235,19 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
                                                     </Box>
                                                 }
                                                 secondary={
-                                                    <Typography variant='caption' color='text.secondary'>
-                                                        {formatDate(item.createdDate)}
-                                                    </Typography>
+                                                    <>
+                                                        <Typography variant='caption' color='text.secondary'>
+                                                            {formatDate(item.createdDate)}
+                                                        </Typography>
+                                                        <Typography
+                                                            variant='caption'
+                                                            color='text.secondary'
+                                                            sx={{ display: 'block', mt: 0.5 }}
+                                                        >
+                                                            {item.authorName || '—'} ·{' '}
+                                                            {item.commitMessage || item.changeDescription || 'No message'}
+                                                        </Typography>
+                                                    </>
                                                 }
                                             />
                                             <ListItemSecondaryAction>
@@ -211,6 +255,18 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
                                                     <Tooltip title='View snapshot'>
                                                         <IconButton size='small' onClick={() => handleViewSnapshot(item)}>
                                                             <IconEye size={16} />
+                                                        </IconButton>
+                                                    </Tooltip>
+
+                                                    <Tooltip title='Tag this version'>
+                                                        <IconButton size='small' onClick={() => handleTag(item)}>
+                                                            <IconTag size={18} />
+                                                        </IconButton>
+                                                    </Tooltip>
+
+                                                    <Tooltip title='Publish this version to end users'>
+                                                        <IconButton size='small' onClick={() => handlePublishVersion(item)}>
+                                                            <IconRocket size={18} />
                                                         </IconButton>
                                                     </Tooltip>
 
