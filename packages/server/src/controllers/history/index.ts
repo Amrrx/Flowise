@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
-import { EntityType } from '../../database/entities/FlowHistory'
+import { EntityType } from '../../Interface'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import historyService from '../../services/history'
 

@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { FindOptionsWhere, Repository } from 'typeorm'
-import { FlowHistory, EntityType } from '../../database/entities/FlowHistory'
+import { FlowHistory } from '../../database/entities/FlowHistory'
+import { EntityType } from '../../Interface'
 import { ChatFlow } from '../../database/entities/ChatFlow'
 import { Assistant } from '../../database/entities/Assistant'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'

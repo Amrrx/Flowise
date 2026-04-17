@@ -198,9 +198,11 @@ export interface IVariableDict {
     [key: string]: string
 }
 
+export type EntityType = 'CHATFLOW' | 'ASSISTANT'
+
 export interface IFlowHistory {
     id: string
-    entityType: 'CHATFLOW' | 'ASSISTANT'
+    entityType: EntityType
     entityId: string
     snapshotData: string
     changeDescription?: string

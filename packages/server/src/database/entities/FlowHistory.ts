@@ -1,21 +1,6 @@
 /* eslint-disable */
 import { Entity, Column, CreateDateColumn, PrimaryGeneratedColumn, Index } from 'typeorm'
-
-export type EntityType = 'CHATFLOW' | 'ASSISTANT'
-
-export interface IFlowHistory {
-    id: string
-    entityType: EntityType
-    entityId: string
-    snapshotData: string
-    changeDescription?: string
-    version: number
-    createdDate: Date
-    workspaceId?: string
-    commitMessage?: string
-    authorId?: string
-    authorName?: string
-}
+import { IFlowHistory, EntityType } from '../../Interface'
 
 @Entity()
 @Index(['entityType', 'entityId', 'version'])
