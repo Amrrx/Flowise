@@ -5,6 +5,7 @@ import { cloneDeep, isEqual, uniqWith } from 'lodash'
 import OpenAI from 'openai'
 import { DeleteResult, In, QueryRunner } from 'typeorm'
 import { Assistant } from '../../database/entities/Assistant'
+import { FlowHistory } from '../../database/entities/FlowHistory'
 import { Credential } from '../../database/entities/Credential'
 import { DocumentStore } from '../../database/entities/DocumentStore'
 import { Workspace } from '../../enterprise/database/entities/workspace.entity'
@@ -623,6 +624,49 @@ const generateAssistantInstruction = async (task: string, selectedChatModel: ICo
     }
 }
 
+const publish = async (id: string, version: number | undefined, workspaceId: string): Promise<void> => {
+    const appServer = getRunningExpressApp()
+    const assistantRepo = appServer.AppDataSource.getRepository(Assistant)
+    const historyRepo = appServer.AppDataSource.getRepository(FlowHistory)
+
+    const assistant = await assistantRepo.findOne({ where: { id } })
+    if (!assistant) {
+        throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Assistant ${id} not found`)
+    }
+    if (assistant.workspaceId !== workspaceId) {
+        throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'Assistant belongs to a different workspace')
+    }
+
+    const targetVersion = version ?? assistant.currentHistoryVersion
+    if (!targetVersion) {
+        throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'No version available to publish')
+    }
+
+    const snapshot = await historyRepo.findOne({
+        where: { entityType: 'ASSISTANT', entityId: id, version: targetVersion }
+    })
+    if (!snapshot) {
+        throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `History version ${targetVersion} not found`)
+    }
+
+    await assistantRepo.update(id, { publishedVersion: targetVersion })
+}
+
+const unpublish = async (id: string, workspaceId: string): Promise<void> => {
+    const appServer = getRunningExpressApp()
+    const assistantRepo = appServer.AppDataSource.getRepository(Assistant)
+
+    const assistant = await assistantRepo.findOne({ where: { id } })
+    if (!assistant) {
+        throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Assistant ${id} not found`)
+    }
+    if (assistant.workspaceId !== workspaceId) {
+        throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'Assistant belongs to a different workspace')
+    }
+
+    await assistantRepo.update(id, { publishedVersion: null as unknown as undefined })
+}
+
 export default {
     createAssistant,
     deleteAssistant,
@@ -635,5 +679,7 @@ export default {
     getDocumentStores,
     getTools,
     generateAssistantInstruction,
-    getAssistantsCountByOrganization
+    getAssistantsCountByOrganization,
+    publish,
+    unpublish
 }

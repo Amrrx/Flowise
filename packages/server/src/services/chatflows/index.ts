@@ -8,6 +8,7 @@ import { UsageCacheManager } from '../../UsageCacheManager'
 import { ChatFlow, EnumChatflowType } from '../../database/entities/ChatFlow'
 import { ChatMessage } from '../../database/entities/ChatMessage'
 import { ChatMessageFeedback } from '../../database/entities/ChatMessageFeedback'
+import { FlowHistory } from '../../database/entities/FlowHistory'
 import { UpsertHistory } from '../../database/entities/UpsertHistory'
 import { Workspace } from '../../enterprise/database/entities/workspace.entity'
 import { getWorkspaceSearchOptions } from '../../enterprise/utils/ControllerServiceUtils'
@@ -550,6 +551,49 @@ const checkIfChatflowHasChanged = async (chatflowId: string, lastUpdatedDateTime
     }
 }
 
+const publish = async (id: string, version: number | undefined, workspaceId: string): Promise<void> => {
+    const appServer = getRunningExpressApp()
+    const cfRepo = appServer.AppDataSource.getRepository(ChatFlow)
+    const historyRepo = appServer.AppDataSource.getRepository(FlowHistory)
+
+    const chatflow = await cfRepo.findOne({ where: { id } })
+    if (!chatflow) {
+        throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Chatflow ${id} not found`)
+    }
+    if (chatflow.workspaceId !== workspaceId) {
+        throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'Chatflow belongs to a different workspace')
+    }
+
+    const targetVersion = version ?? chatflow.currentHistoryVersion
+    if (!targetVersion) {
+        throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'No version available to publish')
+    }
+
+    const snapshot = await historyRepo.findOne({
+        where: { entityType: 'CHATFLOW', entityId: id, version: targetVersion }
+    })
+    if (!snapshot) {
+        throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `History version ${targetVersion} not found`)
+    }
+
+    await cfRepo.update(id, { publishedVersion: targetVersion })
+}
+
+const unpublish = async (id: string, workspaceId: string): Promise<void> => {
+    const appServer = getRunningExpressApp()
+    const cfRepo = appServer.AppDataSource.getRepository(ChatFlow)
+
+    const chatflow = await cfRepo.findOne({ where: { id } })
+    if (!chatflow) {
+        throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Chatflow ${id} not found`)
+    }
+    if (chatflow.workspaceId !== workspaceId) {
+        throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'Chatflow belongs to a different workspace')
+    }
+
+    await cfRepo.update(id, { publishedVersion: null as unknown as undefined })
+}
+
 export default {
     checkIfChatflowIsValidForStreaming,
     checkIfChatflowIsValidForUploads,
@@ -563,5 +607,7 @@ export default {
     getSinglePublicChatflow,
     getSinglePublicChatbotConfig,
     checkIfChatflowHasChanged,
-    getAllChatflowsCountByOrganization
+    getAllChatflowsCountByOrganization,
+    publish,
+    unpublish
 }
