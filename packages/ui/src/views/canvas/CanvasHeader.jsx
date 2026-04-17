@@ -5,10 +5,21 @@ import { useEffect, useRef, useState } from 'react'
 
 // material-ui
 import { useTheme } from '@mui/material/styles'
-import { Avatar, Box, ButtonBase, Typography, Stack, TextField, Button } from '@mui/material'
+import { Avatar, Box, ButtonBase, Typography, Stack, TextField, Button, Chip, Tooltip } from '@mui/material'
 
 // icons
-import { IconSettings, IconChevronLeft, IconDeviceFloppy, IconPencil, IconCheck, IconX, IconCode, IconHistory } from '@tabler/icons-react'
+import {
+    IconSettings,
+    IconChevronLeft,
+    IconDeviceFloppy,
+    IconPencil,
+    IconCheck,
+    IconX,
+    IconCode,
+    IconHistory,
+    IconRocket,
+    IconRocketOff
+} from '@tabler/icons-react'
 
 // project imports
 import Settings from '@/views/settings'
@@ -285,6 +296,59 @@ const CanvasHeader = ({
         }
     }
 
+    const publishedVersion = chatflow?.publishedVersion ?? null
+    const currentHistoryVersion = chatflow?.currentHistoryVersion ?? null
+    const hasUnpublishedChanges = publishedVersion !== null && publishedVersion !== currentHistoryVersion
+
+    const reloadChatflow = async () => {
+        const { data } = await chatflowsApi.getSpecificChatflow(chatflow.id)
+        dispatch({ type: SET_CHATFLOW, chatflow: data })
+    }
+
+    const handlePublish = async () => {
+        try {
+            await chatflowsApi.publishChatflow(chatflow.id)
+            await reloadChatflow()
+            enqueueSnackbar({
+                message: 'Published current version',
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'success'
+                }
+            })
+        } catch (error) {
+            enqueueSnackbar({
+                message: `Publish failed: ${error?.response?.data?.message || error.message}`,
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'error'
+                }
+            })
+        }
+    }
+
+    const handleUnpublish = async () => {
+        try {
+            await chatflowsApi.unpublishChatflow(chatflow.id)
+            await reloadChatflow()
+            enqueueSnackbar({
+                message: 'Unpublished — end users now get live edits',
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'success'
+                }
+            })
+        } catch (error) {
+            enqueueSnackbar({
+                message: `Unpublish failed: ${error?.response?.data?.message || error.message}`,
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'error'
+                }
+            })
+        }
+    }
+
     const onConfirmSaveName = (flowName) => {
         setFlowDialogOpen(false)
         setSavePermission(isAgentCanvas ? 'agentflows:update' : 'chatflows:update')
@@ -499,6 +563,51 @@ const CanvasHeader = ({
                             </Avatar>
                         </ButtonBase>
                     </Available>
+                    {chatflow?.id && (
+                        <>
+                            {publishedVersion !== null && (
+                                <Chip
+                                    size='small'
+                                    label={
+                                        hasUnpublishedChanges
+                                            ? `Published v${publishedVersion} · Editing v${currentHistoryVersion}`
+                                            : `Published v${publishedVersion}`
+                                    }
+                                    color={hasUnpublishedChanges ? 'warning' : 'success'}
+                                    sx={{ mr: 1 }}
+                                />
+                            )}
+                            <Tooltip
+                                title={publishedVersion === null ? 'Publish current version to end users' : 'Unpublish (serve live edits)'}
+                            >
+                                <ButtonBase
+                                    sx={{ borderRadius: '50%', mr: 2 }}
+                                    onClick={publishedVersion === null ? handlePublish : handleUnpublish}
+                                >
+                                    <Avatar
+                                        variant='rounded'
+                                        sx={{
+                                            ...theme.typography.commonAvatar,
+                                            ...theme.typography.mediumAvatar,
+                                            transition: 'all .2s ease-in-out',
+                                            background: theme.palette.secondary.light,
+                                            color: theme.palette.secondary.dark,
+                                            '&:hover': {
+                                                background: theme.palette.secondary.dark,
+                                                color: theme.palette.secondary.light
+                                            }
+                                        }}
+                                    >
+                                        {publishedVersion === null ? (
+                                            <IconRocket stroke={1.5} size='1.3rem' />
+                                        ) : (
+                                            <IconRocketOff stroke={1.5} size='1.3rem' />
+                                        )}
+                                    </Avatar>
+                                </ButtonBase>
+                            </Tooltip>
+                        </>
+                    )}
                     {chatflow?.id && (
                         <ButtonBase title='Version History' sx={{ borderRadius: '50%', mr: 2 }}>
                             <Avatar

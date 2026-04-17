@@ -50,6 +50,10 @@ const getTools = () => client.get('/assistants/components/tools')
 
 const generateAssistantInstruction = (body) => client.post(`/assistants/generate/instruction`, body)
 
+const publishAssistant = (id, version) => client.post(`/assistants/${id}/publish`, version ? { version } : {})
+
+const unpublishAssistant = (id) => client.delete(`/assistants/${id}/publish`)
+
 export default {
     getAllAssistants,
     getSpecificAssistant,
@@ -69,5 +73,7 @@ export default {
     getChatModels,
     getDocStores,
     getTools,
-    generateAssistantInstruction
+    generateAssistantInstruction,
+    publishAssistant,
+    unpublishAssistant
 }
