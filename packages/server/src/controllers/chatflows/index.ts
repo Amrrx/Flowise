@@ -156,12 +156,15 @@ const saveChatflow = async (req: Request, res: Response, next: NextFunction) => 
         Object.assign(newChatFlow, stripProtectedFields(body))
 
         newChatFlow.workspaceId = workspaceId
+        const author = req.user ? { id: req.user.id, name: req.user.name } : undefined
+        const commitMessage = typeof req.body?.commitMessage === 'string' ? req.body.commitMessage : undefined
         const apiResponse = await chatflowsService.saveChatflow(
             newChatFlow,
             orgId,
             workspaceId,
             subscriptionId,
-            getRunningExpressApp().usageCacheManager
+            getRunningExpressApp().usageCacheManager,
+            { author, commitMessage }
         )
 
         return res.json(apiResponse)
@@ -202,7 +205,12 @@ const updateChatflow = async (req: Request, res: Response, next: NextFunction) =
         const rateLimiterManager = RateLimiterManager.getInstance()
         await rateLimiterManager.updateRateLimiter(updateChatFlow)
 
-        const apiResponse = await chatflowsService.updateChatflow(chatflow, updateChatFlow, orgId, workspaceId, subscriptionId)
+        const author = req.user ? { id: req.user.id, name: req.user.name } : undefined
+        const commitMessage = typeof req.body?.commitMessage === 'string' ? req.body.commitMessage : undefined
+        const apiResponse = await chatflowsService.updateChatflow(chatflow, updateChatFlow, orgId, workspaceId, subscriptionId, {
+            author,
+            commitMessage
+        })
         return res.json(apiResponse)
     } catch (error) {
         next(error)

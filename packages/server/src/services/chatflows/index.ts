@@ -24,6 +24,11 @@ import logger from '../../utils/logger'
 import { updateStorageUsage } from '../../utils/quotaUsage'
 import historyService from '../history'
 
+interface SnapshotOptions {
+    author?: { id: string; name: string }
+    commitMessage?: string
+}
+
 export const enum ChatflowErrorMessage {
     INVALID_CHATFLOW_TYPE = 'Invalid Chatflow Type',
     INVALID_CHATFLOW_ID = 'Invalid Chatflow ID'
@@ -282,7 +287,8 @@ const saveChatflow = async (
     orgId: string,
     workspaceId: string,
     subscriptionId: string,
-    usageCacheManager: UsageCacheManager
+    usageCacheManager: UsageCacheManager,
+    options?: SnapshotOptions
 ): Promise<any> => {
     try {
         validateChatflowType(newChatFlow.type)
@@ -341,7 +347,9 @@ const saveChatflow = async (
             entityId: dbResponse.id,
             entityData: dbResponse,
             changeDescription: 'Initial creation',
-            workspaceId: dbResponse.workspaceId
+            workspaceId: dbResponse.workspaceId,
+            author: options?.author,
+            commitMessage: options?.commitMessage
         })
         if (snapshot) {
             // Re-fetch the chatflow to get the updated currentHistoryVersion
@@ -365,7 +373,8 @@ const updateChatflow = async (
     updateChatFlow: ChatFlow,
     orgId: string,
     workspaceId: string,
-    subscriptionId: string
+    subscriptionId: string,
+    options?: SnapshotOptions
 ): Promise<any> => {
     try {
         const appServer = getRunningExpressApp()
@@ -389,7 +398,9 @@ const updateChatflow = async (
                 const parsed = JSON.parse(updateChatFlow.chatbotConfig) as ICommonObject
                 if (parsed?.fullFileUpload?.allowedUploadFileTypes !== undefined) {
                     const current = parsed.fullFileUpload.allowedUploadFileTypes
-                    const sanitized = sanitizeAllowedUploadMimeTypesFromConfig(typeof current === 'string' ? current : String(current ?? ''))
+                    const sanitized = sanitizeAllowedUploadMimeTypesFromConfig(
+                        typeof current === 'string' ? current : String(current ?? '')
+                    )
                     parsed.fullFileUpload.allowedUploadFileTypes = sanitized
                     updateChatFlow.chatbotConfig = JSON.stringify(parsed)
                 }
@@ -411,7 +422,9 @@ const updateChatflow = async (
             entityId: dbResponse.id,
             entityData: dbResponse,
             changeDescription: 'Updated',
-            workspaceId: dbResponse.workspaceId
+            workspaceId: dbResponse.workspaceId,
+            author: options?.author,
+            commitMessage: options?.commitMessage
         })
         if (snapshot) {
             // Re-fetch the chatflow to get the updated currentHistoryVersion

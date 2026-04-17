@@ -35,7 +35,9 @@ const createAssistant = async (req: Request, res: Response, next: NextFunction) 
         const newAssistantCount = 1
         await checkUsageLimit('flows', subscriptionId, getRunningExpressApp().usageCacheManager, existingAssistantCount + newAssistantCount)
 
-        const apiResponse = await assistantsService.createAssistant(body, orgId, workspaceId)
+        const author = req.user ? { id: req.user.id, name: req.user.name } : undefined
+        const commitMessage = typeof req.body?.commitMessage === 'string' ? req.body.commitMessage : undefined
+        const apiResponse = await assistantsService.createAssistant(body, orgId, workspaceId, { author, commitMessage })
 
         return res.json(apiResponse)
     } catch (error) {
@@ -125,7 +127,9 @@ const updateAssistant = async (req: Request, res: Response, next: NextFunction) 
                 `Error: assistantsController.updateAssistant - workspace ${workspaceId} not found!`
             )
         }
-        const apiResponse = await assistantsService.updateAssistant(req.params.id, req.body, workspaceId)
+        const author = req.user ? { id: req.user.id, name: req.user.name } : undefined
+        const commitMessage = typeof req.body?.commitMessage === 'string' ? req.body.commitMessage : undefined
+        const apiResponse = await assistantsService.updateAssistant(req.params.id, req.body, workspaceId, { author, commitMessage })
         return res.json(apiResponse)
     } catch (error) {
         next(error)

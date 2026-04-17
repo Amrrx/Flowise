@@ -22,7 +22,12 @@ import { checkUsageLimit } from '../../utils/quotaUsage'
 import nodesService from '../nodes'
 import historyService from '../history'
 
-const createAssistant = async (requestBody: any, orgId: string, workspaceId: string): Promise<Assistant> => {
+interface SnapshotOptions {
+    author?: { id: string; name: string }
+    commitMessage?: string
+}
+
+const createAssistant = async (requestBody: any, orgId: string, workspaceId: string, options?: SnapshotOptions): Promise<Assistant> => {
     try {
         const appServer = getRunningExpressApp()
         if (!requestBody.details) {
@@ -58,7 +63,9 @@ const createAssistant = async (requestBody: any, orgId: string, workspaceId: str
                 entityId: dbResponse.id,
                 entityData: dbResponse,
                 changeDescription: 'Initial creation',
-                workspaceId: dbResponse.workspaceId
+                workspaceId: dbResponse.workspaceId,
+                author: options?.author,
+                commitMessage: options?.commitMessage
             })
 
             return dbResponse
@@ -174,7 +181,9 @@ const createAssistant = async (requestBody: any, orgId: string, workspaceId: str
             entityId: dbResponse.id,
             entityData: dbResponse,
             changeDescription: 'Initial creation',
-            workspaceId: dbResponse.workspaceId
+            workspaceId: dbResponse.workspaceId,
+            author: options?.author,
+            commitMessage: options?.commitMessage
         })
 
         return dbResponse
@@ -311,7 +320,12 @@ const getAssistantById = async (assistantId: string, workspaceId: string): Promi
     }
 }
 
-const updateAssistant = async (assistantId: string, requestBody: any, workspaceId: string): Promise<Assistant> => {
+const updateAssistant = async (
+    assistantId: string,
+    requestBody: any,
+    workspaceId: string,
+    options?: SnapshotOptions
+): Promise<Assistant> => {
     try {
         const appServer = getRunningExpressApp()
         const assistant = await appServer.AppDataSource.getRepository(Assistant).findOneBy({
@@ -349,7 +363,9 @@ const updateAssistant = async (assistantId: string, requestBody: any, workspaceI
                 entityId: dbResponse.id,
                 entityData: dbResponse,
                 changeDescription: 'Updated',
-                workspaceId: dbResponse.workspaceId
+                workspaceId: dbResponse.workspaceId,
+                author: options?.author,
+                commitMessage: options?.commitMessage
             })
 
             return dbResponse
@@ -439,7 +455,9 @@ const updateAssistant = async (assistantId: string, requestBody: any, workspaceI
                 entityId: dbResponse.id,
                 entityData: dbResponse,
                 changeDescription: 'Updated',
-                workspaceId: dbResponse.workspaceId
+                workspaceId: dbResponse.workspaceId,
+                author: options?.author,
+                commitMessage: options?.commitMessage
             })
 
             return dbResponse
