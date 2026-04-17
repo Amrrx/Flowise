@@ -19,7 +19,6 @@ import { CustomTemplate } from './CustomTemplate'
 import { Execution } from './Execution'
 import { FlowHistory } from './FlowHistory'
 import { FlowVersionTag } from './FlowVersionTag'
-import { FlowDraft } from './FlowDraft'
 import { LoginActivity, WorkspaceShared, WorkspaceUsers } from '../../enterprise/database/entities/EnterpriseEntities'
 import { User } from '../../enterprise/database/entities/user.entity'
 import { Organization } from '../../enterprise/database/entities/organization.entity'
@@ -56,7 +55,6 @@ export const entities = {
     Execution,
     FlowHistory,
     FlowVersionTag,
-    FlowDraft,
     Organization,
     Role,
     OrganizationUser,

@@ -72,7 +72,4 @@ export class ChatFlow implements IChatFlow {
 
     @Column({ nullable: true, type: 'int' })
     publishedVersion?: number
-
-    @Column({ nullable: true, type: 'text' })
-    draftData?: string
 }

@@ -75,7 +75,6 @@ export interface IChatFlow {
     workspaceId: string
     currentHistoryVersion?: number
     publishedVersion?: number
-    draftData?: string
 }
 
 export interface IChatMessage {
@@ -224,36 +223,6 @@ export interface IFlowVersionTag {
     createdByName: string
     createdDate: Date
     workspaceId: string
-}
-
-export interface IFlowDraft {
-    id: string
-    entityId: string
-    userId: string
-    draftData: string
-    basedOnVersion?: number
-    updatedDate: Date
-    workspaceId: string
-}
-
-export interface IDiffResult {
-    nodes: {
-        added: Array<{ id: string; name: string; type: string }>
-        removed: Array<{ id: string; name: string; type: string }>
-        modified: Array<{
-            id: string
-            name: string
-            changes: Array<{ field: string; from: string; to: string }>
-        }>
-    }
-    edges: {
-        added: Array<{ id: string; source: string; target: string }>
-        removed: Array<{ id: string; source: string; target: string }>
-        rerouted: Array<{ id: string; field: string; from: string; to: string }>
-    }
-    entity: {
-        modified: Array<{ field: string; from: string; to: string }>
-    }
 }
 
 export interface INodeDependencies {
