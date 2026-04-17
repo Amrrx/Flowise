@@ -47,6 +47,7 @@ import { FixDocumentStoreFileChunkLongText1765000000000 } from './1765000000000-
 import { AddApiKeyPermission1765360298674 } from './1765360298674-AddApiKeyPermission'
 import { AddReasonContentToChatMessage1764759496768 } from './1764759496768-AddReasonContentToChatMessage'
 import { AddMcpServerConfigToChatFlow1767000000000 } from './1767000000000-AddMcpServerConfigToChatFlow'
+import { AddAuthorFieldsToFlowHistory1767100000000 } from './1767100000000-AddAuthorFieldsToFlowHistory'
 
 import { AddAuthTables1720230151482 } from '../../../enterprise/database/migrations/mariadb/1720230151482-AddAuthTables'
 import { AddWorkspace1725437498242 } from '../../../enterprise/database/migrations/mariadb/1725437498242-AddWorkspace'
@@ -120,5 +121,6 @@ export const mariadbMigrations = [
     FixDocumentStoreFileChunkLongText1765000000000,
     AddApiKeyPermission1765360298674,
     AddReasonContentToChatMessage1764759496768,
-    AddMcpServerConfigToChatFlow1767000000000
+    AddMcpServerConfigToChatFlow1767000000000,
+    AddAuthorFieldsToFlowHistory1767100000000
 ]
