@@ -47,6 +47,7 @@ import { AddApiKeyPermission1765360298674 } from './1765360298674-AddApiKeyPermi
 import { AddReasonContentToChatMessage1764759496768 } from './1764759496768-AddReasonContentToChatMessage'
 import { AddMcpServerConfigToChatFlow1767000000000 } from './1767000000000-AddMcpServerConfigToChatFlow'
 import { AddAuthorFieldsToFlowHistory1767100000000 } from './1767100000000-AddAuthorFieldsToFlowHistory'
+import { AddFlowVersionTagTable1767100000001 } from './1767100000001-AddFlowVersionTagTable'
 
 import { AddAuthTables1720230151482 } from '../../../enterprise/database/migrations/postgres/1720230151482-AddAuthTables'
 import { AddWorkspace1720230151484 } from '../../../enterprise/database/migrations/postgres/1720230151484-AddWorkspace'
@@ -120,5 +121,6 @@ export const postgresMigrations = [
     AddApiKeyPermission1765360298674,
     AddReasonContentToChatMessage1764759496768,
     AddMcpServerConfigToChatFlow1767000000000,
-    AddAuthorFieldsToFlowHistory1767100000000
+    AddAuthorFieldsToFlowHistory1767100000000,
+    AddFlowVersionTagTable1767100000001
 ]
