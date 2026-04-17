@@ -54,7 +54,7 @@ function createSchemaModel(inputSchema: { type: string; properties?: Record<stri
 async function createPipedreamTool(toolkit: MCPToolkit, name: string, description: string, argsSchema: any): Promise<Tool> {
     return tool(
         async (input): Promise<string> => {
-            const client = await toolkit.createClient()
+            const { client } = await toolkit.createClient()
             try {
                 const req: CallToolRequest = {
                     method: 'tools/call',
