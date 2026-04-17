@@ -56,6 +56,8 @@ interface CreateSnapshotOptions {
     entityData: any
     changeDescription?: string
     workspaceId?: string
+    author?: { id: string; name: string }
+    commitMessage?: string
 }
 
 interface GetHistoryOptions {
@@ -76,7 +78,9 @@ const createSnapshot = async ({
     entityId,
     entityData,
     changeDescription,
-    workspaceId
+    workspaceId,
+    author,
+    commitMessage
 }: CreateSnapshotOptions): Promise<FlowHistory | null> => {
     try {
         const appServer = getRunningExpressApp()
@@ -101,7 +105,10 @@ const createSnapshot = async ({
             snapshotData: JSON.stringify(entityData),
             changeDescription,
             version: nextVersion,
-            workspaceId
+            workspaceId,
+            authorId: author?.id,
+            authorName: author?.name,
+            commitMessage
         })
 
         const savedSnapshot = await historyRepository.save(snapshot)
