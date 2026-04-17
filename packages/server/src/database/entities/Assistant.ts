@@ -32,4 +32,7 @@ export class Assistant implements IAssistant {
 
     @Column({ nullable: true, type: 'int' })
     currentHistoryVersion?: number
+
+    @Column({ nullable: true, type: 'int' })
+    publishedVersion?: number
 }

@@ -132,6 +132,7 @@ export interface IAssistant {
     createdDate: Date
     workspaceId: string
     currentHistoryVersion?: number
+    publishedVersion?: number
 }
 
 export interface ICredential {
