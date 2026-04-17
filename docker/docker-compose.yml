@@ -61,6 +61,7 @@ services:
             # SETTINGS
             - NUMBER_OF_PROXIES=${NUMBER_OF_PROXIES}
             - CORS_ORIGINS=${CORS_ORIGINS}
+            - MCP_CORS_ORIGINS=${MCP_CORS_ORIGINS}
             - IFRAME_ORIGINS=${IFRAME_ORIGINS}
             - FLOWISE_FILE_SIZE_LIMIT=${FLOWISE_FILE_SIZE_LIMIT}
             - SHOW_COMMUNITY_NODES=${SHOW_COMMUNITY_NODES}
@@ -142,7 +143,7 @@ services:
             - TRUST_PROXY=${TRUST_PROXY}
 
             # Extra
-            - DOCUMENT_PROCESSOR_URL=http://localhost:8001  # or your Python service URL
+            - DOCUMENT_PROCESSOR_URL=http://localhost:8001 # or your Python service URL
             - RAG_ENHANCEMENT_ENABLED=true
         ports:
             - '${PORT}:${PORT}'
