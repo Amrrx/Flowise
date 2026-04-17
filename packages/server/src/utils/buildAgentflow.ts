@@ -59,6 +59,7 @@ import { Telemetry } from './telemetry'
 import { getWorkspaceSearchOptions } from '../enterprise/utils/ControllerServiceUtils'
 import { UsageCacheManager } from '../UsageCacheManager'
 import { generateTTSForResponseStream, shouldAutoPlayTTS } from './buildChatflow'
+import { resolveEffectiveFlowData } from './resolveEffectiveFlowData'
 
 interface IWaitingNode {
     nodeId: string
@@ -1576,6 +1577,13 @@ export const executeAgentFlow = async ({
 
     const prependedChatHistory = incomingInput.history ?? []
     const apiMessageId = uuidv4()
+
+    if (!isRecursive) {
+        const effectiveFlowData = await resolveEffectiveFlowData('CHATFLOW', chatflow)
+        if (effectiveFlowData && effectiveFlowData !== chatflow.flowData) {
+            chatflow.flowData = effectiveFlowData
+        }
+    }
 
     /*** Get chatflows and prepare data  ***/
     const flowData = chatflow.flowData

@@ -70,6 +70,7 @@ import { FLOWISE_METRIC_COUNTERS, FLOWISE_COUNTER_STATUS, IMetricsProvider } fro
 import { getWorkspaceSearchOptions } from '../enterprise/utils/ControllerServiceUtils'
 import { OMIT_QUEUE_JOB_DATA } from './constants'
 import { executeAgentFlow } from './buildAgentflow'
+import { resolveEffectiveFlowData } from './resolveEffectiveFlowData'
 import { Workspace } from '../enterprise/database/entities/workspace.entity'
 import { Organization } from '../enterprise/database/entities/organization.entity'
 
@@ -1001,6 +1002,11 @@ export const utilBuildChatflow = async (req: Request, isInternal: boolean = fals
     })
     if (!chatflow) {
         throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Chatflow ${chatflowid} not found`)
+    }
+
+    const effectiveFlowData = await resolveEffectiveFlowData('CHATFLOW', chatflow)
+    if (effectiveFlowData && effectiveFlowData !== chatflow.flowData) {
+        chatflow.flowData = effectiveFlowData
     }
 
     const isAgentFlow = chatflow.type === 'MULTIAGENT'
