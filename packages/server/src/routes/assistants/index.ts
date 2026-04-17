@@ -24,4 +24,8 @@ router.get('/components/tools', assistantsController.getTools)
 // Generate Assistant Instruction
 router.post('/generate/instruction', assistantsController.generateAssistantInstruction)
 
+// PUBLISH
+router.post('/:id/publish', checkAnyPermission('assistants:update'), assistantsController.publishAssistant)
+router.delete('/:id/publish', checkAnyPermission('assistants:update'), assistantsController.unpublishAssistant)
+
 export default router

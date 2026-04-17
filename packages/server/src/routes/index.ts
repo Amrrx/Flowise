@@ -18,6 +18,7 @@ import feedbackRouter from './feedback'
 import fetchLinksRouter from './fetch-links'
 import filesRouter from './files'
 import flowConfigRouter from './flow-config'
+import flowTagsRouter from './flow-tags'
 import getUploadFileRouter from './get-upload-file'
 import historyRouter from './history'
 import internalChatmessagesRouter from './internal-chat-messages'
@@ -92,6 +93,7 @@ router.use('/export-import', exportImportRouter)
 router.use('/feedback', feedbackRouter)
 router.use('/fetch-links', fetchLinksRouter)
 router.use('/flow-config', flowConfigRouter)
+router.use('/flow-tags', flowTagsRouter)
 router.use('/internal-chatmessage', internalChatmessagesRouter)
 router.use('/internal-prediction', internalPredictionRouter)
 router.use('/get-upload-file', getUploadFileRouter)

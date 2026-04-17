@@ -283,6 +283,27 @@ const checkIfChatflowHasChanged = async (req: Request, res: Response, next: Next
     }
 }
 
+const publishChatflow = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params
+        const version = typeof req.body?.version === 'number' ? req.body.version : undefined
+        await chatflowsService.publish(id, version, req.user?.activeWorkspaceId ?? '')
+        return res.json({ success: true })
+    } catch (error) {
+        next(error)
+    }
+}
+
+const unpublishChatflow = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params
+        await chatflowsService.unpublish(id, req.user?.activeWorkspaceId ?? '')
+        return res.json({ success: true })
+    } catch (error) {
+        next(error)
+    }
+}
+
 export default {
     checkIfChatflowIsValidForStreaming,
     checkIfChatflowIsValidForUploads,
@@ -294,5 +315,7 @@ export default {
     updateChatflow,
     getSinglePublicChatflow,
     getSinglePublicChatbotConfig,
-    checkIfChatflowHasChanged
+    checkIfChatflowHasChanged,
+    publishChatflow,
+    unpublishChatflow
 }

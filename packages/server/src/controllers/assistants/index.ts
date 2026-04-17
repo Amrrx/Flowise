@@ -185,6 +185,27 @@ const generateAssistantInstruction = async (req: Request, res: Response, next: N
     }
 }
 
+const publishAssistant = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params
+        const version = typeof req.body?.version === 'number' ? req.body.version : undefined
+        await assistantsService.publish(id, version, req.user?.activeWorkspaceId ?? '')
+        return res.json({ success: true })
+    } catch (error) {
+        next(error)
+    }
+}
+
+const unpublishAssistant = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params
+        await assistantsService.unpublish(id, req.user?.activeWorkspaceId ?? '')
+        return res.json({ success: true })
+    } catch (error) {
+        next(error)
+    }
+}
+
 export default {
     createAssistant,
     deleteAssistant,
@@ -194,5 +215,7 @@ export default {
     getChatModels,
     getDocumentStores,
     getTools,
-    generateAssistantInstruction
+    generateAssistantInstruction,
+    publishAssistant,
+    unpublishAssistant
 }

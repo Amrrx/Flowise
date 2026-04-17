@@ -40,4 +40,8 @@ router.get(
     chatflowsController.checkIfChatflowHasChanged
 )
 
+// PUBLISH
+router.post('/:id/publish', checkAnyPermission('chatflows:update'), chatflowsController.publishChatflow)
+router.delete('/:id/publish', checkAnyPermission('chatflows:update'), chatflowsController.unpublishChatflow)
+
 export default router
