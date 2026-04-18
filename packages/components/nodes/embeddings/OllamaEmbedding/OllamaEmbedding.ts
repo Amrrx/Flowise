@@ -1,6 +1,6 @@
 import { OllamaEmbeddings, OllamaEmbeddingsParams } from '@langchain/ollama'
-import { INode, INodeData, INodeParams } from '../../../src/Interface'
-import { getBaseClasses } from '../../../src/utils'
+import { ICommonObject, INode, INodeData, INodeParams } from '../../../src/Interface'
+import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
 
 class OllamaEmbedding_Embeddings implements INode {
     label: string
@@ -17,12 +17,19 @@ class OllamaEmbedding_Embeddings implements INode {
     constructor() {
         this.label = 'Ollama Embedding'
         this.name = 'ollamaEmbedding'
-        this.version = 2.0
+        this.version = 2.1
         this.type = 'OllamaEmbeddings'
         this.icon = 'Ollama.svg'
         this.category = 'Embeddings'
         this.description = 'Generate embeddings for a given text using open source model on Ollama'
         this.baseClasses = [this.type, ...getBaseClasses(OllamaEmbeddings)]
+        this.credential = {
+            label: 'Connect Credential',
+            name: 'credential',
+            type: 'credential',
+            credentialNames: ['ollamaApi'],
+            optional: true
+        }
         this.inputs = [
             {
                 label: 'Base URL',
@@ -63,16 +70,37 @@ class OllamaEmbedding_Embeddings implements INode {
                 default: true,
                 optional: true,
                 additionalParams: true
+            },
+            {
+                label: 'Keep Alive',
+                name: 'keepAlive',
+                type: 'string',
+                description: 'How long to keep the model loaded. A duration string (such as "10m" or "24h"). Default: 5m.',
+                default: '5m',
+                optional: true,
+                additionalParams: true
+            },
+            {
+                label: 'Context Window Size',
+                name: 'numCtx',
+                type: 'number',
+                description:
+                    'Size of the context window used for the embedding. (Default: 2048). Refer to <a target="_blank" href="https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values">docs</a> for more details.',
+                step: 1,
+                optional: true,
+                additionalParams: true
             }
         ]
     }
 
-    async init(nodeData: INodeData): Promise<any> {
+    async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
         const modelName = nodeData.inputs?.modelName as string
         const baseUrl = nodeData.inputs?.baseUrl as string
         const numThread = nodeData.inputs?.numThread as string
         const numGpu = nodeData.inputs?.numGpu as string
         const useMMap = nodeData.inputs?.useMMap as boolean
+        const keepAlive = nodeData.inputs?.keepAlive as string
+        const numCtx = nodeData.inputs?.numCtx as string
 
         const obj: OllamaEmbeddingsParams = {
             model: modelName,
@@ -82,12 +110,23 @@ class OllamaEmbedding_Embeddings implements INode {
         const requestOptions: NonNullable<OllamaEmbeddingsParams['requestOptions']> = {}
         if (numThread) requestOptions.numThread = parseFloat(numThread)
         if (numGpu) requestOptions.numGpu = parseFloat(numGpu)
+        if (numCtx) requestOptions.numCtx = parseFloat(numCtx)
 
         // default useMMap to true
         // Note: @langchain/ollama uses `useMmap` (not `useMMap`) in requestOptions
         requestOptions.useMmap = useMMap ?? true
 
         if (Object.keys(requestOptions).length) obj.requestOptions = requestOptions
+
+        if (keepAlive) obj.keepAlive = keepAlive
+
+        const credentialData = await getCredentialData(nodeData.credential ?? '', options)
+        const ollamaApiKey = getCredentialParam('ollamaApiKey', credentialData, nodeData)
+        if (ollamaApiKey) {
+            obj.headers = new Headers({
+                Authorization: `Bearer ${ollamaApiKey}`
+            })
+        }
 
         const model = new OllamaEmbeddings(obj)
         return model
