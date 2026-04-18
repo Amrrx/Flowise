@@ -35,6 +35,9 @@ import { Available } from '@/ui-component/rbac/available'
 
 // API
 import chatflowsApi from '@/api/chatflows'
+import historyApi from '@/api/history'
+
+import moment from 'moment'
 
 // Hooks
 import useApi from '@/hooks/useApi'
@@ -80,6 +83,7 @@ const CanvasHeader = ({
     const [exportAsTemplateDialogProps, setExportAsTemplateDialogProps] = useState({})
     const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
     const [historyDialogProps, setHistoryDialogProps] = useState({})
+    const [latestHistory, setLatestHistory] = useState(null)
     const enqueueSnackbar = (...args) => dispatch(enqueueSnackbarAction(...args))
     const closeSnackbar = (...args) => dispatch(closeSnackbarAction(...args))
 
@@ -379,6 +383,23 @@ const CanvasHeader = ({
         }
     }, [chatflow, title, chatflowConfigurationDialogOpen])
 
+    useEffect(() => {
+        if (!chatflow?.id) return
+        let cancelled = false
+        historyApi
+            .getHistory('CHATFLOW', chatflow.id, { page: 1, limit: 1 })
+            .then((res) => {
+                if (cancelled) return
+                setLatestHistory(res.data.data?.[0] ?? null)
+            })
+            .catch(() => {
+                if (!cancelled) setLatestHistory(null)
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [chatflow?.id, chatflow?.updatedDate, currentHistoryVersion])
+
     return (
         <>
             <Stack flexDirection='row' justifyContent='space-between' sx={{ width: '100%' }}>
@@ -413,7 +434,7 @@ const CanvasHeader = ({
                     </Box>
                     <Box sx={{ width: '100%' }}>
                         {!isEditingFlowName ? (
-                            <Stack flexDirection='row'>
+                            <Stack flexDirection='row' alignItems='center'>
                                 <Typography
                                     sx={{
                                         fontSize: '1.5rem',
@@ -450,6 +471,13 @@ const CanvasHeader = ({
                                             </Avatar>
                                         </ButtonBase>
                                     </Available>
+                                )}
+                                {chatflow?.id && currentHistoryVersion !== null && (
+                                    <Typography variant='caption' sx={{ ml: 2, color: theme.palette.text.secondary, whiteSpace: 'nowrap' }}>
+                                        v{currentHistoryVersion}
+                                        {latestHistory?.authorName && ` · ${latestHistory.authorName}`}
+                                        {latestHistory?.createdDate && ` · ${moment(latestHistory.createdDate).fromNow()}`}
+                                    </Typography>
                                 )}
                             </Stack>
                         ) : (

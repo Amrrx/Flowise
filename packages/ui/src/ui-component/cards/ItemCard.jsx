@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux'
 
 // material-ui
 import { styled } from '@mui/material/styles'
-import { Box, Grid, Tooltip, Typography, useTheme } from '@mui/material'
+import { Box, Chip, Grid, Tooltip, Typography, useTheme } from '@mui/material'
 
 // project imports
 import MainCard from '@/ui-component/cards/MainCard'
@@ -105,6 +105,43 @@ const ItemCard = ({ data, images, icons, onClick }) => {
                             >
                                 {data.description}
                             </span>
+                        )}
+                        {(data.currentHistoryVersion != null || data.latestAuthor || (data.tags && data.tags.length > 0)) && (
+                            <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+                                {data.currentHistoryVersion != null && (
+                                    <Chip
+                                        size='small'
+                                        label={
+                                            data.publishedVersion == null
+                                                ? `v${data.currentHistoryVersion}`
+                                                : data.publishedVersion !== data.currentHistoryVersion
+                                                ? `Published v${data.publishedVersion} · Editing v${data.currentHistoryVersion}`
+                                                : `Published v${data.publishedVersion}`
+                                        }
+                                        color={
+                                            data.publishedVersion == null
+                                                ? 'default'
+                                                : data.publishedVersion !== data.currentHistoryVersion
+                                                ? 'warning'
+                                                : 'success'
+                                        }
+                                        sx={{ height: 20, fontSize: '0.7rem' }}
+                                    />
+                                )}
+                                {data.latestAuthor && (
+                                    <Typography variant='caption' sx={{ color: theme.palette.text.secondary }}>
+                                        {data.latestAuthor}
+                                    </Typography>
+                                )}
+                                {data.tags?.slice(0, 3).map((tag) => (
+                                    <Chip key={tag} size='small' label={tag} variant='outlined' sx={{ height: 20, fontSize: '0.7rem' }} />
+                                ))}
+                                {data.tags?.length > 3 && (
+                                    <Typography variant='caption' sx={{ color: theme.palette.text.secondary }}>
+                                        +{data.tags.length - 3}
+                                    </Typography>
+                                )}
+                            </Box>
                         )}
                     </Box>
                     {(images?.length > 0 || icons?.length > 0) && (

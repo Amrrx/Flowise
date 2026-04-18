@@ -1,6 +1,6 @@
 import { ICommonObject, removeFolderFromStorage } from 'flowise-components'
 import { StatusCodes } from 'http-status-codes'
-import { Brackets, In } from 'typeorm'
+import { Brackets, DataSource, In } from 'typeorm'
 import { validate as isValidUUID } from 'uuid'
 import { ChatflowType, IReactFlowObject } from '../../Interface'
 import { FLOWISE_COUNTER_STATUS, FLOWISE_METRIC_COUNTERS } from '../../Interface.Metrics'
@@ -9,6 +9,7 @@ import { ChatFlow, EnumChatflowType } from '../../database/entities/ChatFlow'
 import { ChatMessage } from '../../database/entities/ChatMessage'
 import { ChatMessageFeedback } from '../../database/entities/ChatMessageFeedback'
 import { FlowHistory } from '../../database/entities/FlowHistory'
+import { FlowVersionTag } from '../../database/entities/FlowVersionTag'
 import { UpsertHistory } from '../../database/entities/UpsertHistory'
 import { Workspace } from '../../enterprise/database/entities/workspace.entity'
 import { getWorkspaceSearchOptions } from '../../enterprise/utils/ControllerServiceUtils'
@@ -149,6 +150,46 @@ const deleteChatflow = async (chatflowId: string, orgId: string, workspaceId: st
     }
 }
 
+type EnrichedChatflow = ChatFlow & { latestAuthor: string | null; tags: string[] }
+
+const enrichChatflowsWithVersionMetadata = async (chatflows: ChatFlow[], dataSource: DataSource) => {
+    if (!chatflows.length) return
+    const ids = chatflows.map((c) => c.id)
+    const versioned = chatflows.filter((c) => c.currentHistoryVersion != null)
+
+    const authorByChatflow = new Map<string, string>()
+    if (versioned.length) {
+        const historyQuery = dataSource.getRepository(FlowHistory).createQueryBuilder('h').where('h.entityType = :t', { t: 'CHATFLOW' })
+        historyQuery.andWhere(
+            new Brackets((bb) => {
+                versioned.forEach((c, i) => {
+                    bb.orWhere(`(h.entityId = :id${i} AND h.version = :v${i})`, {
+                        [`id${i}`]: c.id,
+                        [`v${i}`]: c.currentHistoryVersion
+                    })
+                })
+            })
+        )
+        const latestHistories = await historyQuery.getMany()
+        for (const h of latestHistories) {
+            if (h.authorName) authorByChatflow.set(h.entityId, h.authorName)
+        }
+    }
+
+    const tags = await dataSource.getRepository(FlowVersionTag).find({ where: { entityType: 'CHATFLOW', entityId: In(ids) } })
+    const tagsByChatflow = new Map<string, string[]>()
+    for (const t of tags) {
+        const existing = tagsByChatflow.get(t.entityId) ?? []
+        existing.push(t.tagName)
+        tagsByChatflow.set(t.entityId, existing)
+    }
+
+    for (const c of chatflows as EnrichedChatflow[]) {
+        c.latestAuthor = authorByChatflow.get(c.id) ?? null
+        c.tags = tagsByChatflow.get(c.id) ?? []
+    }
+}
+
 const getAllChatflows = async (type?: ChatflowType, workspaceId?: string, page: number = -1, limit: number = -1) => {
     try {
         const appServer = getRunningExpressApp()
@@ -173,6 +214,8 @@ const getAllChatflows = async (type?: ChatflowType, workspaceId?: string, page: 
         }
         if (workspaceId) queryBuilder.andWhere('chat_flow.workspaceId = :workspaceId', { workspaceId })
         const [data, total] = await queryBuilder.getManyAndCount()
+
+        await enrichChatflowsWithVersionMetadata(data, appServer.AppDataSource)
 
         if (page > 0 && limit > 0) {
             return { data, total }
