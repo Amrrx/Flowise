@@ -860,6 +860,38 @@ export const getGlobalVariable = async (
     return vars
 }
 
+const applyJsonFilter = (variablePath: string, rawValue: any, offset: number, fullStr: string): string => {
+    let parsed: any
+    try {
+        parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue
+    } catch (error) {
+        logger.warn(
+            `[getVariableValue] "| json" filter could not parse ${variablePath}. Falling back to raw value. Input: ${JSON.stringify(
+                rawValue
+            )} | Error: ${(error as Error).message}`
+        )
+        return typeof rawValue === 'string' ? rawValue : String(rawValue)
+    }
+
+    const literal = JSON.stringify(parsed)
+    return isInsideJsonString(fullStr, offset) ? JSON.stringify(literal).slice(1, -1) : literal
+}
+
+const isInsideJsonString = (fullStr: string, offset: number): boolean => {
+    let count = 0
+    let i = 0
+    while (i < offset) {
+        const ch = fullStr[i]
+        if (ch === '\\') {
+            i += 2
+            continue
+        }
+        if (ch === '"') count++
+        i++
+    }
+    return count % 2 === 1
+}
+
 /**
  * Get variable value from outputResponses.output
  * @param {string} paramValue
@@ -901,44 +933,53 @@ export const getVariableValue = async (
             const variableEndIdx = startIdx
             const variableFullPath = initialValue.substring(variableStartIdx, variableEndIdx)
 
+            const filterMatch = variableFullPath.match(/^(.*?)\s*\|\s*(json)\s*$/)
+            const cleanPath = filterMatch ? filterMatch[1].trim() : variableFullPath
+            const filter = filterMatch ? filterMatch[2] : null
+            const placeholderOffset = variableStartIdx - 2
+
             /**
              * Apply string transformation to convert special chars:
              * FROM: hello i am ben\n\n\thow are you?
              * TO: hello i am benFLOWISE_NEWLINEFLOWISE_NEWLINEFLOWISE_TABhow are you?
              */
-            if (isAcceptVariable && variableFullPath === QUESTION_VAR_PREFIX) {
+            if (isAcceptVariable && cleanPath === QUESTION_VAR_PREFIX) {
                 variableDict[`{{${variableFullPath}}}`] = handleEscapeCharacters(question, false)
             }
 
-            if (isAcceptVariable && variableFullPath === FILE_ATTACHMENT_PREFIX) {
+            if (isAcceptVariable && cleanPath === FILE_ATTACHMENT_PREFIX) {
                 variableDict[`{{${variableFullPath}}}`] = handleEscapeCharacters(uploadedFilesContent, false)
             }
 
-            if (isAcceptVariable && variableFullPath === CHAT_HISTORY_VAR_PREFIX) {
+            if (isAcceptVariable && cleanPath === CHAT_HISTORY_VAR_PREFIX) {
                 variableDict[`{{${variableFullPath}}}`] = handleEscapeCharacters(convertChatHistoryToText(chatHistory), false)
             }
 
-            if (variableFullPath.startsWith('$vars.')) {
+            if (cleanPath.startsWith('$vars.')) {
                 const vars = await getGlobalVariable(flowConfig, availableVariables, variableOverrides)
-                const variableValue = get(vars, variableFullPath.replace('$vars.', ''))
+                const variableValue = get(vars, cleanPath.replace('$vars.', ''))
                 if (variableValue != null) {
-                    variableDict[`{{${variableFullPath}}}`] = variableValue
-                    returnVal = returnVal.split(`{{${variableFullPath}}}`).join(variableValue)
+                    const replacement =
+                        filter === 'json' ? applyJsonFilter(cleanPath, variableValue, placeholderOffset, initialValue) : variableValue
+                    variableDict[`{{${variableFullPath}}}`] = replacement
+                    returnVal = returnVal.split(`{{${variableFullPath}}}`).join(replacement)
                 }
             }
 
-            if (variableFullPath.startsWith('$flow.') && flowConfig) {
-                const variableValue = get(flowConfig, variableFullPath.replace('$flow.', ''))
+            if (cleanPath.startsWith('$flow.') && flowConfig) {
+                const variableValue = get(flowConfig, cleanPath.replace('$flow.', ''))
                 if (variableValue != null) {
-                    variableDict[`{{${variableFullPath}}}`] = variableValue
-                    returnVal = returnVal.split(`{{${variableFullPath}}}`).join(variableValue)
+                    const replacement =
+                        filter === 'json' ? applyJsonFilter(cleanPath, variableValue, placeholderOffset, initialValue) : variableValue
+                    variableDict[`{{${variableFullPath}}}`] = replacement
+                    returnVal = returnVal.split(`{{${variableFullPath}}}`).join(replacement)
                 }
             }
 
             // Resolve values with following case.
             // 1: <variableNodeId>.data.instance
             // 2: <variableNodeId>.data.instance.pathtokey
-            const variableFullPathParts = variableFullPath.split('.')
+            const variableFullPathParts = cleanPath.split('.')
             const variableNodeId = variableFullPathParts[0]
             const executedNode = reactFlowNodes.find((nd) => nd.id === variableNodeId)
             if (executedNode) {

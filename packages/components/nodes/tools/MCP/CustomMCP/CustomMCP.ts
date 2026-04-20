@@ -4,6 +4,7 @@ import { MCPToolkit, validateMCPServerConfig } from '../core'
 import { getVars, prepareSandboxVars, parseJsonBody } from '../../../../src/utils'
 import { DataSource } from 'typeorm'
 import hash from 'object-hash'
+import { substituteVariablesInString, substituteVariablesInObject } from './variableSubstitution'
 
 const mcpServerConfig = `{
     "command": "npx",
@@ -204,67 +205,6 @@ class Custom_MCP implements INode {
             throw new Error(`Invalid MCP Server Config: ${error}`)
         }
     }
-}
-
-function substituteVariablesInObject(obj: any, sandbox: any): any {
-    if (typeof obj === 'string') {
-        // Replace variables in string values
-        return substituteVariablesInString(obj, sandbox)
-    } else if (Array.isArray(obj)) {
-        // Recursively process arrays
-        return obj.map((item) => substituteVariablesInObject(item, sandbox))
-    } else if (obj !== null && typeof obj === 'object') {
-        // Recursively process object properties
-        const result: any = {}
-        for (const [key, value] of Object.entries(obj)) {
-            result[key] = substituteVariablesInObject(value, sandbox)
-        }
-        return result
-    }
-    // Return primitive values as-is
-    return obj
-}
-
-function substituteVariablesInString(str: string, sandbox: any): string {
-    // Use regex to find {{$variableName.property}} patterns and replace with sandbox values
-    return str.replace(/\{\{\$([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\}\}/g, (match, variablePath) => {
-        try {
-            // Split the path into parts (e.g., "vars.testvar1" -> ["vars", "testvar1"])
-            const pathParts = variablePath.split('.')
-
-            // Start with the sandbox object
-            let current = sandbox
-
-            // Navigate through the path
-            for (const part of pathParts) {
-                // For the first part, check if it exists with $ prefix
-                if (current === sandbox) {
-                    const sandboxKey = `$${part}`
-                    if (Object.keys(current).includes(sandboxKey)) {
-                        current = current[sandboxKey]
-                    } else {
-                        // If the key doesn't exist, return the original match
-                        return match
-                    }
-                } else {
-                    // For subsequent parts, access directly
-                    if (current && typeof current === 'object' && part in current) {
-                        current = current[part]
-                    } else {
-                        // If the property doesn't exist, return the original match
-                        return match
-                    }
-                }
-            }
-
-            // Return the resolved value, converting to string if necessary
-            return typeof current === 'string' ? current : JSON.stringify(current)
-        } catch (error) {
-            // If any error occurs during resolution, return the original match
-            console.warn(`Error resolving variable ${match}:`, error)
-            return match
-        }
-    })
 }
 
 function convertToValidJSONString(inputString: string) {
