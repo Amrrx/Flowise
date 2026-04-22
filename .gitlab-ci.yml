@@ -5,9 +5,10 @@ variables:
     IMAGE_NAME: $CI_REGISTRY_IMAGE
     DOCKER_DRIVER: overlay2
     DOCKER_TLS_CERTDIR: '/certs'
+    DOCKER_BUILDKIT: '1'
 
-# Build the image once; push only for main and git tags.
-# develop runs the build as a smoke test without publishing.
+# Build and publish only on git tags.
+# Branch pushes (main, develop) do not trigger Docker builds — releases are tag-driven.
 build_and_push:
     stage: deploy
     image: docker:24
@@ -15,24 +16,18 @@ build_and_push:
         - docker:24-dind
     before_script:
         - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+        - docker buildx create --use --name flowise-builder
     script:
-        - docker build --pull --cache-from $IMAGE_NAME:latest -t $IMAGE_NAME:$CI_COMMIT_SHORT_SHA -t $IMAGE_NAME:latest .
         - |
-            if [ "$CI_COMMIT_BRANCH" = "main" ] || [ -n "$CI_COMMIT_TAG" ]; then
-              docker push $IMAGE_NAME:$CI_COMMIT_SHORT_SHA
-            fi
-        - |
-            if [ "$CI_COMMIT_BRANCH" = "main" ]; then
-              docker push $IMAGE_NAME:latest
-            fi
-        - |
-            if [ -n "$CI_COMMIT_TAG" ]; then
-              docker tag $IMAGE_NAME:$CI_COMMIT_SHORT_SHA $IMAGE_NAME:$CI_COMMIT_TAG
-              docker push $IMAGE_NAME:$CI_COMMIT_TAG
-            fi
+            docker buildx build \
+              --cache-from type=registry,ref=$IMAGE_NAME:buildcache \
+              --cache-to   type=registry,ref=$IMAGE_NAME:buildcache,mode=max \
+              -t $IMAGE_NAME:$CI_COMMIT_SHORT_SHA \
+              -t $IMAGE_NAME:$CI_COMMIT_TAG \
+              -t $IMAGE_NAME:latest \
+              --push \
+              .
     after_script:
         - docker logout $CI_REGISTRY
     only:
-        - main
-        - develop
         - tags
