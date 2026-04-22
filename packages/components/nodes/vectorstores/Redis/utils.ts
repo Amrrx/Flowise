@@ -27,5 +27,5 @@ export const escapeAllStrings = (obj: object) => {
 }
 
 export const unEscapeSpecialChars = (str: string) => {
-    return str.replaceAll('\\-', '-')
+    return str.replaceAll('\\-', '-').replaceAll('\\:', ':').replaceAll('\\"', '"')
 }
