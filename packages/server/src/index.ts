@@ -2,6 +2,7 @@ import { ExpressAdapter } from '@bull-board/express'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express, { Request, Response } from 'express'
+import * as fs from 'fs'
 import 'global-agent/bootstrap'
 import http from 'http'
 import path from 'path'
@@ -408,7 +409,23 @@ export async function start(): Promise<void> {
 
     server.listen(port, host, () => {
         logger.info(`⚡️ [server]: Flowise Server is listening at ${host ? 'http://' + host : ''}:${port}`)
+        const customVersion = readCustomVersion()
+        if (customVersion) logger.info(`⚡️ [server]: Custom build version ${customVersion}`)
     })
+}
+
+function readCustomVersion(): string | undefined {
+    for (let depth = 1; depth <= 6; depth++) {
+        const candidate = path.join(__dirname, ...Array(depth).fill('..'), 'package.json')
+        if (!fs.existsSync(candidate)) continue
+        try {
+            const parsed = JSON.parse(fs.readFileSync(candidate, 'utf8'))
+            if (parsed.custom_version) return parsed.custom_version
+        } catch {
+            // ignore malformed package.json in ancestor dirs
+        }
+    }
+    return undefined
 }
 
 export function getInstance(): App | undefined {
