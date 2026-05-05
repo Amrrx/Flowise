@@ -2,22 +2,30 @@ import { MigrationInterface, QueryRunner } from 'typeorm'
 
 export class UniqueChatFlowNamePerWorkspace1788000000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Resolve duplicates by appending " (N)" so the unique index can be created.
+        // Resolve duplicates by appending " (N)". Order by (createdDate, id) so the
+        // ordering is total — id is a unique UUID, so no ties remain even when
+        // multiple rows share createdDate.
         await queryRunner.query(`
             UPDATE chat_flow
                SET name = name || ' (' || (
                    SELECT COUNT(*) FROM chat_flow AS dup
                     WHERE dup.workspaceId = chat_flow.workspaceId
                       AND dup.name = chat_flow.name
-                      AND dup.createdDate < chat_flow.createdDate
+                      AND (
+                          dup.createdDate < chat_flow.createdDate
+                          OR (dup.createdDate = chat_flow.createdDate AND dup.id < chat_flow.id)
+                      )
                ) || ')'
-             WHERE rowid IN (
-                 SELECT cf.rowid
+             WHERE id IN (
+                 SELECT cf.id
                    FROM chat_flow cf
                    JOIN chat_flow other
                      ON other.workspaceId = cf.workspaceId
                     AND other.name = cf.name
-                    AND other.createdDate < cf.createdDate
+                    AND (
+                        other.createdDate < cf.createdDate
+                        OR (other.createdDate = cf.createdDate AND other.id < cf.id)
+                    )
              );
         `)
         await queryRunner.query(`CREATE UNIQUE INDEX idx_chat_flow_name_workspace ON chat_flow(name, workspaceId);`)

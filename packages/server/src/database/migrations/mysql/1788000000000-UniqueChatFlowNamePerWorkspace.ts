@@ -6,7 +6,7 @@ export class UniqueChatFlowNamePerWorkspace1788000000000 implements MigrationInt
             UPDATE chat_flow cf
               JOIN (
                   SELECT id,
-                         ROW_NUMBER() OVER (PARTITION BY workspaceId, name ORDER BY createdDate) - 1 AS dup_rank
+                         ROW_NUMBER() OVER (PARTITION BY workspaceId, name ORDER BY createdDate, id) - 1 AS dup_rank
                     FROM chat_flow
               ) ranked ON ranked.id = cf.id
                SET cf.name = CONCAT(cf.name, ' (', ranked.dup_rank, ')')

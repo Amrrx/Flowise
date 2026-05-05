@@ -5,7 +5,7 @@ export class UniqueChatFlowNamePerWorkspace1788000000000 implements MigrationInt
         await queryRunner.query(`
             WITH ranked AS (
                 SELECT id,
-                       ROW_NUMBER() OVER (PARTITION BY "workspaceId", name ORDER BY "createdDate") - 1 AS dup_rank
+                       ROW_NUMBER() OVER (PARTITION BY "workspaceId", name ORDER BY "createdDate", id) - 1 AS dup_rank
                   FROM chat_flow
             )
             UPDATE chat_flow
