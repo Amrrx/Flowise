@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 // material-ui
 import { useTheme } from '@mui/material/styles'
-import { Avatar, Box, ButtonBase, Typography, Stack, TextField, Button, Chip, Tooltip } from '@mui/material'
+import { Avatar, Box, ButtonBase, Typography, Stack, TextField, Button, Chip, Tooltip, Switch, FormControlLabel } from '@mui/material'
 
 // icons
 import {
@@ -309,6 +309,31 @@ const CanvasHeader = ({
         dispatch({ type: SET_CHATFLOW, chatflow: data })
     }
 
+    const isActive = chatflow?.deployed !== false // null/undefined treated as active for legacy rows
+
+    const handleToggleActive = async () => {
+        const target = !isActive
+        try {
+            await chatflowsApi.updateChatflow(chatflow.id, { deployed: target })
+            await reloadChatflow()
+            enqueueSnackbar({
+                message: target ? 'Chatflow activated — accepting requests' : 'Chatflow deactivated — requests will be rejected',
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: target ? 'success' : 'warning'
+                }
+            })
+        } catch (error) {
+            enqueueSnackbar({
+                message: `Failed to toggle active state: ${error?.response?.data?.message || error.message}`,
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'error'
+                }
+            })
+        }
+    }
+
     const handlePublish = async () => {
         try {
             await chatflowsApi.publishChatflow(chatflow.id)
@@ -402,6 +427,20 @@ const CanvasHeader = ({
 
     return (
         <>
+            {!isActive && (
+                <Box
+                    sx={{
+                        bgcolor: 'warning.light',
+                        color: 'warning.contrastText',
+                        px: 2,
+                        py: 1,
+                        textAlign: 'center',
+                        fontSize: '0.875rem'
+                    }}
+                >
+                    ⏸ This chatflow is deactivated. It will not respond to API requests.
+                </Box>
+            )}
             <Stack flexDirection='row' justifyContent='space-between' sx={{ width: '100%' }}>
                 <Stack flexDirection='row' sx={{ width: '100%', maxWidth: '50%' }}>
                     <Box>
@@ -591,6 +630,17 @@ const CanvasHeader = ({
                             </Avatar>
                         </ButtonBase>
                     </Available>
+                    {chatflow?.id && (
+                        <Tooltip
+                            title={isActive ? 'Deactivate (will reject API requests with 403)' : 'Activate (start accepting API requests)'}
+                        >
+                            <FormControlLabel
+                                control={<Switch checked={isActive} onChange={handleToggleActive} size='small' />}
+                                label={isActive ? 'Active' : 'Inactive'}
+                                sx={{ mr: 1 }}
+                            />
+                        </Tooltip>
+                    )}
                     {chatflow?.id && (
                         <>
                             {publishedVersion !== null && (
