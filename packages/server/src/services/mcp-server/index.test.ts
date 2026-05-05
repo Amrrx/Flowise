@@ -16,7 +16,8 @@ jest.mock(
         Column: () => () => {},
         CreateDateColumn: () => () => {},
         UpdateDateColumn: () => () => {},
-        PrimaryGeneratedColumn: () => () => {}
+        PrimaryGeneratedColumn: () => () => {},
+        Index: () => (_target: any) => _target
     }),
     { virtual: true }
 )
