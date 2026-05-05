@@ -106,6 +106,21 @@ const ItemCard = ({ data, images, icons, onClick }) => {
                                 {data.description}
                             </span>
                         )}
+                        {typeof data.deployed !== 'undefined' && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                                <Box
+                                    sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        bgcolor: data.deployed === false ? 'grey.400' : 'success.main'
+                                    }}
+                                />
+                                <Typography variant='caption' sx={{ color: data.deployed === false ? 'text.disabled' : 'success.main' }}>
+                                    {data.deployed === false ? 'Inactive' : 'Active'}
+                                </Typography>
+                            </Box>
+                        )}
                         {(data.currentHistoryVersion != null || data.latestAuthor || (data.tags && data.tags.length > 0)) && (
                             <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
                                 {data.currentHistoryVersion != null && (
