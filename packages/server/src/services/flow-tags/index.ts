@@ -5,6 +5,9 @@ import { FlowVersionTag } from '../../database/entities/FlowVersionTag'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
 
+const PRODUCTION_TAG_NAME = 'production'
+const TAG_NAME_REGEX = /^[A-Za-z0-9._:-]{1,100}$/
+
 interface CreateTagOptions {
     historyId: string
     tagName: string
@@ -20,6 +23,13 @@ interface ListTagsOptions {
 }
 
 const createTag = async ({ historyId, tagName, description, user, workspaceId }: CreateTagOptions): Promise<FlowVersionTag> => {
+    if (!TAG_NAME_REGEX.test(tagName)) {
+        throw new InternalFlowiseError(
+            StatusCodes.BAD_REQUEST,
+            `Invalid tag name '${tagName}'. Allowed: alphanumeric, '.', '_', '-', ':' (max 100 chars).`
+        )
+    }
+
     const app = getRunningExpressApp()
     const historyRepo = app.AppDataSource.getRepository(FlowHistory)
     const tagRepo = app.AppDataSource.getRepository(FlowVersionTag)
@@ -30,6 +40,17 @@ const createTag = async ({ historyId, tagName, description, user, workspaceId }:
     }
     if (snapshot.workspaceId && snapshot.workspaceId !== workspaceId) {
         throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'History snapshot belongs to a different workspace')
+    }
+
+    if (tagName === PRODUCTION_TAG_NAME) {
+        // Per-chatflow uniqueness: tagging a new snapshot as 'production' promotes it,
+        // automatically untagging the previous production version.
+        await tagRepo.delete({
+            entityType: snapshot.entityType,
+            entityId: snapshot.entityId,
+            tagName: PRODUCTION_TAG_NAME,
+            workspaceId
+        })
     }
 
     const tag = tagRepo.create({
