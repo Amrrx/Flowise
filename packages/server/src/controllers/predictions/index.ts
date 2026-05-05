@@ -9,6 +9,7 @@ import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
 import { v4 as uuidv4 } from 'uuid'
 import { getErrorMessage } from '../../errors/utils'
 import { MODE } from '../../Interface'
+import { resolveChatflowReference } from '../../utils/resolveChatflowReference'
 
 // Send input message and get prediction result (External)
 const createPrediction = async (req: Request, res: Response, next: NextFunction) => {
@@ -27,10 +28,11 @@ const createPrediction = async (req: Request, res: Response, next: NextFunction)
         }
         const workspaceId = req.user?.activeWorkspaceId
 
-        const chatflow = await chatflowsService.getChatflowById(req.params.id, workspaceId)
-        if (!chatflow) {
-            throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Chatflow ${req.params.id} not found`)
+        const { chatflow } = await resolveChatflowReference(req.params.id, workspaceId ?? '')
+        if (chatflow.deployed === false) {
+            throw new InternalFlowiseError(StatusCodes.FORBIDDEN, `Chatflow is deactivated`)
         }
+        req.params.id = chatflow.id
         let isDomainAllowed = true
         let unauthorizedOriginError = 'This site is not allowed to access this chatbot'
         logger.info(`[server]: Request originated from ${req.headers.origin || 'UNKNOWN ORIGIN'}`)
@@ -54,7 +56,7 @@ const createPrediction = async (req: Request, res: Response, next: NextFunction)
             }
         }
         if (isDomainAllowed) {
-            const streamable = await chatflowsService.checkIfChatflowIsValidForStreaming(req.params.id)
+            const streamable = await chatflowsService.checkIfChatflowIsValidForStreaming(chatflow.id)
             const isStreamingRequested = req.body.streaming === 'true' || req.body.streaming === true
             if (streamable?.isStreaming && isStreamingRequested) {
                 const sseStreamer = getRunningExpressApp().sseStreamer
