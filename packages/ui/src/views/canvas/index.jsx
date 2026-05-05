@@ -230,7 +230,7 @@ const Canvas = () => {
             if (!chatflow.id) {
                 const newChatflowBody = {
                     name: chatflowName,
-                    deployed: false,
+                    deployed: true,
                     isPublic: false,
                     flowData,
                     type: isAgentCanvas ? 'MULTIAGENT' : 'CHATFLOW'
