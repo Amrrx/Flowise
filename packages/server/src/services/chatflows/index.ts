@@ -41,6 +41,13 @@ export function validateChatflowType(type: ChatflowType | undefined) {
         throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, ChatflowErrorMessage.INVALID_CHATFLOW_TYPE)
 }
 
+const isChatflowNameWorkspaceUniqueViolation = (error: any): boolean => {
+    const code = error?.code
+    const message = String(error?.message || '')
+    const isUniqueViolation = code === 'SQLITE_CONSTRAINT' || code === '23505' /* postgres */ || code === 'ER_DUP_ENTRY' /* mysql/mariadb */
+    return isUniqueViolation && message.includes('idx_chat_flow_name_workspace')
+}
+
 // Check if chatflow valid for streaming
 const checkIfChatflowIsValidForStreaming = async (chatflowId: string): Promise<any> => {
     try {
@@ -404,7 +411,13 @@ const saveChatflow = async (
         }
 
         return dbResponse
-    } catch (error) {
+    } catch (error: any) {
+        if (isChatflowNameWorkspaceUniqueViolation(error)) {
+            throw new InternalFlowiseError(StatusCodes.CONFLICT, `A chatflow named '${newChatFlow.name}' already exists in this workspace.`)
+        }
+        if (error instanceof InternalFlowiseError) {
+            throw error
+        }
         throw new InternalFlowiseError(
             StatusCodes.INTERNAL_SERVER_ERROR,
             `Error: chatflowsService.saveChatflow - ${getErrorMessage(error)}`
@@ -479,7 +492,14 @@ const updateChatflow = async (
         }
 
         return dbResponse
-    } catch (error) {
+    } catch (error: any) {
+        if (isChatflowNameWorkspaceUniqueViolation(error)) {
+            const attemptedName = updateChatFlow?.name ?? chatflow?.name
+            throw new InternalFlowiseError(StatusCodes.CONFLICT, `A chatflow named '${attemptedName}' already exists in this workspace.`)
+        }
+        if (error instanceof InternalFlowiseError) {
+            throw error
+        }
         throw new InternalFlowiseError(
             StatusCodes.INTERNAL_SERVER_ERROR,
             `Error: chatflowsService.updateChatflow - ${getErrorMessage(error)}`
