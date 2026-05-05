@@ -49,6 +49,7 @@ import { AddMcpServerConfigToChatFlow1767000000000 } from './1767000000000-AddMc
 import { AddAuthorFieldsToFlowHistory1767100000000 } from './1767100000000-AddAuthorFieldsToFlowHistory'
 import { AddFlowVersionTagTable1767100000001 } from './1767100000001-AddFlowVersionTagTable'
 import { AddPublishedVersionToEntities1767100000002 } from './1767100000002-AddPublishedVersionToEntities'
+import { UniqueChatFlowNamePerWorkspace1788000000000 } from './1788000000000-UniqueChatFlowNamePerWorkspace'
 
 import { AddAuthTables1720230151482 } from '../../../enterprise/database/migrations/postgres/1720230151482-AddAuthTables'
 import { AddWorkspace1720230151484 } from '../../../enterprise/database/migrations/postgres/1720230151484-AddWorkspace'
@@ -124,5 +125,6 @@ export const postgresMigrations = [
     AddMcpServerConfigToChatFlow1767000000000,
     AddAuthorFieldsToFlowHistory1767100000000,
     AddFlowVersionTagTable1767100000001,
-    AddPublishedVersionToEntities1767100000002
+    AddPublishedVersionToEntities1767100000002,
+    UniqueChatFlowNamePerWorkspace1788000000000
 ]
