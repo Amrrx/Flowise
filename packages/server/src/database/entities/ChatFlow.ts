@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn } from 'typeorm'
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn, Index } from 'typeorm'
 import { ChatflowType, IChatFlow } from '../../Interface'
 
 export enum EnumChatflowType {
@@ -10,6 +10,7 @@ export enum EnumChatflowType {
 }
 
 @Entity()
+@Index('idx_chat_flow_name_workspace', ['name', 'workspaceId'], { unique: true })
 export class ChatFlow implements IChatFlow {
     @PrimaryGeneratedColumn('uuid')
     id: string
@@ -20,6 +21,9 @@ export class ChatFlow implements IChatFlow {
     @Column({ type: 'text' })
     flowData: string
 
+    // 'deployed' is reused as the runtime active/inactive toggle.
+    // When false, the prediction controller rejects requests with 403.
+    // (UI labels this "Active/Inactive" — name retained to avoid breaking migrations.)
     @Column({ nullable: true })
     deployed?: boolean
 
