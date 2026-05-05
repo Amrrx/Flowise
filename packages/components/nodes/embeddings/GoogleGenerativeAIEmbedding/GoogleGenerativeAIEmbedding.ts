@@ -4,7 +4,7 @@ import { GoogleGenerativeAIEmbeddings, GoogleGenerativeAIEmbeddingsParams } from
 import { TaskType } from '@google/generative-ai'
 import { MODEL_TYPE, getModels } from '../../../src/modelLoader'
 
-class GoogleGenerativeAIEmbeddingsWithStripNewLines extends GoogleGenerativeAIEmbeddings {
+export class GoogleGenerativeAIEmbeddingsWithStripNewLines extends GoogleGenerativeAIEmbeddings {
     stripNewLines: boolean
 
     constructor(params: GoogleGenerativeAIEmbeddingsParams & { stripNewLines?: boolean }) {
@@ -38,7 +38,7 @@ class GoogleGenerativeAIEmbedding_Embeddings implements INode {
     constructor() {
         this.label = 'Google Gemini Embedding'
         this.name = 'googleGenerativeAiEmbeddings'
-        this.version = 2.0
+        this.version = 2.1
         this.type = 'GoogleGenerativeAiEmbeddings'
         this.icon = 'GoogleGemini.svg'
         this.category = 'Embeddings'
@@ -48,9 +48,9 @@ class GoogleGenerativeAIEmbedding_Embeddings implements INode {
             label: 'Connect Credential',
             name: 'credential',
             type: 'credential',
-            credentialNames: ['googleGenerativeAI'],
+            credentialNames: ['googleGenerativeAI', 'googleGenerativeAIServiceAccount'],
             optional: false,
-            description: 'Google Generative AI credential.'
+            description: 'Google Generative AI credential. Accepts either an API key or a GCP service account.'
         }
         this.inputs = [
             {
@@ -98,6 +98,7 @@ class GoogleGenerativeAIEmbedding_Embeddings implements INode {
         const modelName = nodeData.inputs?.modelName as string
         const credentialData = await getCredentialData(nodeData.credential ?? '', options)
         const apiKey = getCredentialParam('googleGenerativeAPIKey', credentialData, nodeData)
+        const saJson = getCredentialParam('googleApplicationCredentials', credentialData, nodeData)
         const stripNewLines = nodeData.inputs?.stripNewLines as boolean
 
         let taskType: TaskType
@@ -128,9 +129,17 @@ class GoogleGenerativeAIEmbedding_Embeddings implements INode {
             stripNewLines
         }
 
-        const model = new GoogleGenerativeAIEmbeddingsWithStripNewLines(obj)
-        return model
+        if (saJson) {
+            const { GoogleGenerativeAIEmbeddingsServiceAccount } = await import('./GoogleGenerativeAIEmbeddingsWithSA')
+            return new GoogleGenerativeAIEmbeddingsServiceAccount({ ...obj, saJson })
+        }
+        if (apiKey) {
+            return new GoogleGenerativeAIEmbeddingsWithStripNewLines(obj)
+        }
+        throw new Error(
+            'No Google Generative AI credential provided. Attach either a Google Generative AI (API key) or Google Generative AI (Service Account) credential.'
+        )
     }
 }
 
-module.exports = { nodeClass: GoogleGenerativeAIEmbedding_Embeddings }
+module.exports = { nodeClass: GoogleGenerativeAIEmbedding_Embeddings, GoogleGenerativeAIEmbeddingsWithStripNewLines }

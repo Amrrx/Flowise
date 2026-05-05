@@ -6,6 +6,7 @@ import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../
 import { getModels, MODEL_TYPE } from '../../../src/modelLoader'
 import { GoogleGenerativeAIChatInput } from '@langchain/google-genai'
 import { ChatGoogleGenerativeAI } from './FlowiseChatGoogleGenerativeAI'
+import { ChatGoogleGenerativeAIServiceAccount } from './FlowiseChatGoogleGenerativeAIServiceAccount'
 
 class GoogleGenerativeAI_ChatModels implements INode {
     label: string
@@ -22,7 +23,7 @@ class GoogleGenerativeAI_ChatModels implements INode {
     constructor() {
         this.label = 'Google Gemini'
         this.name = 'chatGoogleGenerativeAI'
-        this.version = 3.1
+        this.version = 3.2
         this.type = 'ChatGoogleGenerativeAI'
         this.icon = 'GoogleGemini.svg'
         this.category = 'Chat Models'
@@ -32,9 +33,9 @@ class GoogleGenerativeAI_ChatModels implements INode {
             label: 'Connect Credential',
             name: 'credential',
             type: 'credential',
-            credentialNames: ['googleGenerativeAI'],
+            credentialNames: ['googleGenerativeAI', 'googleGenerativeAIServiceAccount'],
             optional: false,
-            description: 'Google Generative AI credential.'
+            description: 'Google Generative AI credential. Accepts either an API key or a GCP service account.'
         }
         this.inputs = [
             {
@@ -243,6 +244,7 @@ class GoogleGenerativeAI_ChatModels implements INode {
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
         const credentialData = await getCredentialData(nodeData.credential ?? '', options)
         const apiKey = getCredentialParam('googleGenerativeAPIKey', credentialData, nodeData)
+        const saJson = getCredentialParam('googleApplicationCredentials', credentialData, nodeData)
 
         const temperature = nodeData.inputs?.temperature as string
         const modelName = nodeData.inputs?.modelName as string
@@ -322,7 +324,16 @@ class GoogleGenerativeAI_ChatModels implements INode {
             }
         }
 
-        const model = new ChatGoogleGenerativeAI(nodeData.id, obj)
+        let model: ChatGoogleGenerativeAI
+        if (saJson) {
+            model = new ChatGoogleGenerativeAIServiceAccount(nodeData.id, obj, saJson)
+        } else if (apiKey) {
+            model = new ChatGoogleGenerativeAI(nodeData.id, obj)
+        } else {
+            throw new Error(
+                'No Google Generative AI credential provided. Attach either a Google Generative AI (API key) or Google Generative AI (Service Account) credential.'
+            )
+        }
         model.setMultiModalOption(multiModalOption)
 
         return model
