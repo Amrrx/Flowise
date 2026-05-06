@@ -75,6 +75,13 @@ export async function resolveChatflowReference(
         throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Chatflow '${identifier}' not found`)
     }
 
+    // Active gate fires before tag/version resolution so a deactivated chatflow
+    // returns a clear 403 regardless of which reference shape was used. The
+    // controller also performs this check as a defense-in-depth safety net.
+    if (chatflow.deployed === false) {
+        throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'Chatflow is deactivated')
+    }
+
     if (ref.kind === 'nameTag') {
         const tagRepo = dataSource.getRepository(FlowVersionTag)
         const tag = await tagRepo.findOneBy({

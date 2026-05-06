@@ -88,6 +88,17 @@ describe('resolveChatflowReference', () => {
         await expect(resolveChatflowReference('Shared', 'ws-1')).rejects.toThrow(/ambiguous/i)
     })
 
+    it('throws 403 when chatflow is deactivated, before tag lookup', async () => {
+        const chatflow = { id: 'cf-1', name: 'Tee', flowData: 'LIVE', deployed: false, workspaceId: 'ws-1' }
+        const tagRepo = { findOneBy: jest.fn() }
+        mockApp({
+            ChatFlow: { findBy: jest.fn().mockResolvedValue([chatflow]), findOneBy: jest.fn().mockResolvedValue(chatflow) },
+            FlowVersionTag: tagRepo
+        })
+        await expect(resolveChatflowReference('Tee@nonexistent', 'ws-1')).rejects.toThrow(/deactivated/i)
+        expect(tagRepo.findOneBy).not.toHaveBeenCalled()
+    })
+
     it('resolves name@tag and clears publishedVersion in memory', async () => {
         const chatflow: any = { id: 'cf-1', name: 'Avl_Agent', flowData: 'LIVE', publishedVersion: 5, workspaceId: 'ws-1' }
         const tag = { historyId: 'hist-1' }

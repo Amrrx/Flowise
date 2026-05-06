@@ -45,7 +45,14 @@ const isChatflowNameWorkspaceUniqueViolation = (error: any): boolean => {
     const code = error?.code
     const message = String(error?.message || '')
     const isUniqueViolation = code === 'SQLITE_CONSTRAINT' || code === '23505' /* postgres */ || code === 'ER_DUP_ENTRY' /* mysql/mariadb */
-    return isUniqueViolation && message.includes('idx_chat_flow_name_workspace')
+    if (!isUniqueViolation) return false
+    // Postgres/MySQL/MariaDB include the index name; SQLite's message format is
+    // "UNIQUE constraint failed: chat_flow.name, chat_flow.workspaceId" — so we
+    // also accept the column-pair fingerprint to cover sqlite.
+    return (
+        message.includes('idx_chat_flow_name_workspace') ||
+        (message.includes('chat_flow.name') && message.includes('chat_flow.workspaceId'))
+    )
 }
 
 // Check if chatflow valid for streaming
