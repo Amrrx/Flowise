@@ -69,7 +69,7 @@ describe('resolveChatflowReference', () => {
     it('resolves a name', async () => {
         const chatflow = { id: 'cf-1', name: 'Avl_Agent', flowData: 'LIVE', publishedVersion: null, workspaceId: 'ws-1' }
         mockApp({
-            ChatFlow: { findOneBy: jest.fn().mockResolvedValue(chatflow) }
+            ChatFlow: { findBy: jest.fn().mockResolvedValue([chatflow]) }
         })
         const { resolveEffectiveFlowData } = require('./resolveEffectiveFlowData')
         resolveEffectiveFlowData.mockResolvedValue('LIVE')
@@ -79,12 +79,21 @@ describe('resolveChatflowReference', () => {
         expect(out.effectiveFlowData).toBe('LIVE')
     })
 
+    it('throws 409 when name is ambiguous across workspaces', async () => {
+        const a = { id: 'cf-1', name: 'Shared', workspaceId: 'ws-1' }
+        const b = { id: 'cf-2', name: 'Shared', workspaceId: 'ws-2' }
+        mockApp({
+            ChatFlow: { findBy: jest.fn().mockResolvedValue([a, b]) }
+        })
+        await expect(resolveChatflowReference('Shared', 'ws-1')).rejects.toThrow(/ambiguous/i)
+    })
+
     it('resolves name@tag and clears publishedVersion in memory', async () => {
         const chatflow: any = { id: 'cf-1', name: 'Avl_Agent', flowData: 'LIVE', publishedVersion: 5, workspaceId: 'ws-1' }
         const tag = { historyId: 'hist-1' }
         const history = { snapshotData: JSON.stringify({ flowData: 'TAGGED' }) }
         mockApp({
-            ChatFlow: { findOneBy: jest.fn().mockResolvedValue(chatflow) },
+            ChatFlow: { findBy: jest.fn().mockResolvedValue([chatflow]) },
             FlowVersionTag: { findOneBy: jest.fn().mockResolvedValue(tag) },
             FlowHistory: { findOneBy: jest.fn().mockResolvedValue(history) }
         })
@@ -96,14 +105,14 @@ describe('resolveChatflowReference', () => {
     })
 
     it('throws 404 when chatflow name not found', async () => {
-        mockApp({ ChatFlow: { findOneBy: jest.fn().mockResolvedValue(null) } })
+        mockApp({ ChatFlow: { findBy: jest.fn().mockResolvedValue([]) } })
         await expect(resolveChatflowReference('Nope', 'ws-1')).rejects.toThrow(/not found/i)
     })
 
     it('throws 404 when tag not found', async () => {
         const chatflow = { id: 'cf-1', name: 'Avl_Agent', flowData: 'LIVE', workspaceId: 'ws-1' }
         mockApp({
-            ChatFlow: { findOneBy: jest.fn().mockResolvedValue(chatflow) },
+            ChatFlow: { findBy: jest.fn().mockResolvedValue([chatflow]) },
             FlowVersionTag: { findOneBy: jest.fn().mockResolvedValue(null) }
         })
         await expect(resolveChatflowReference('Avl_Agent@v9.9.9', 'ws-1')).rejects.toThrow(/tag/i)
@@ -113,7 +122,7 @@ describe('resolveChatflowReference', () => {
         const chatflow = { id: 'cf-1', name: 'Avl_Agent', flowData: 'LIVE', workspaceId: 'ws-1' }
         const tag = { historyId: 'hist-orphan' }
         mockApp({
-            ChatFlow: { findOneBy: jest.fn().mockResolvedValue(chatflow) },
+            ChatFlow: { findBy: jest.fn().mockResolvedValue([chatflow]) },
             FlowVersionTag: { findOneBy: jest.fn().mockResolvedValue(tag) },
             FlowHistory: { findOneBy: jest.fn().mockResolvedValue(null) }
         })

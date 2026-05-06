@@ -36,14 +36,39 @@ export function parseChatflowReference(input: string): ChatflowReference {
 
 export async function resolveChatflowReference(
     input: string,
-    workspaceId: string
+    // Reserved for future use — see TODO(multi-workspace) below. Kept on the
+    // signature so callers (predictions controller) don't change when scoping
+    // is restored.
+    _workspaceId: string
 ): Promise<{ chatflow: ChatFlow; effectiveFlowData: string }> {
+    void _workspaceId
     const ref = parseChatflowReference(input)
     const dataSource = getRunningExpressApp().AppDataSource
     const chatflowRepo = dataSource.getRepository(ChatFlow)
 
-    const chatflow =
-        ref.kind === 'uuid' ? await chatflowRepo.findOneBy({ id: ref.id }) : await chatflowRepo.findOneBy({ name: ref.name, workspaceId })
+    let chatflow: ChatFlow | null
+    if (ref.kind === 'uuid') {
+        chatflow = await chatflowRepo.findOneBy({ id: ref.id })
+    } else {
+        // TODO(multi-workspace): Name lookup ignores `workspaceId` because the
+        // prediction route is whitelisted from the API-key middleware (see
+        // WHITELIST_URLS in utils/constants.ts) and `req.user` is therefore
+        // never populated. The unique index `idx_chat_flow_name_workspace`
+        // only enforces uniqueness *within* a workspace, so a name shared
+        // across workspaces would be ambiguous. We accept that trade-off for
+        // single-workspace operation today and surface a 409 if the
+        // ambiguity is ever realized. To restore strict scoping, derive
+        // `workspaceId` from the chatflow's bound API key (see Option B/C in
+        // docs/superpowers/specs/2026-05-05-chatflow-references-and-active-toggle-design.md).
+        const matches = await chatflowRepo.findBy({ name: ref.name })
+        if (matches.length > 1) {
+            throw new InternalFlowiseError(
+                StatusCodes.CONFLICT,
+                `Chatflow name '${ref.name}' is ambiguous (${matches.length} matches across workspaces). Use UUID to disambiguate.`
+            )
+        }
+        chatflow = matches[0] ?? null
+    }
 
     if (!chatflow) {
         const identifier = ref.kind === 'uuid' ? ref.id : ref.name
@@ -56,7 +81,7 @@ export async function resolveChatflowReference(
             entityType: 'CHATFLOW',
             entityId: chatflow.id,
             tagName: ref.tag,
-            workspaceId
+            workspaceId: chatflow.workspaceId
         })
         if (!tag) {
             throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Tag '${ref.tag}' not found on chatflow '${ref.name}'`)
