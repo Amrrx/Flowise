@@ -129,6 +129,38 @@ describe('resolveChatflowReference', () => {
         await expect(resolveChatflowReference('Avl_Agent@v9.9.9', 'ws-1')).rejects.toThrow(/tag/i)
     })
 
+    it('resolves name@vN as a numeric version shortcut when no tag matches', async () => {
+        const chatflow: any = { id: 'cf-1', name: 'Avl_Agent', flowData: 'LIVE', publishedVersion: 5, workspaceId: 'ws-1' }
+        const history = { snapshotData: JSON.stringify({ flowData: 'V8' }) }
+        mockApp({
+            ChatFlow: { findBy: jest.fn().mockResolvedValue([chatflow]) },
+            FlowVersionTag: { findOneBy: jest.fn().mockResolvedValue(null) },
+            FlowHistory: { findOneBy: jest.fn().mockResolvedValue(history) }
+        })
+
+        const out = await resolveChatflowReference('Avl_Agent@v8', 'ws-1')
+        expect(out.effectiveFlowData).toBe('V8')
+        expect(out.chatflow.flowData).toBe('V8')
+        expect(out.chatflow.publishedVersion).toBeNull()
+    })
+
+    it('prefers a named tag over the numeric shortcut when both could match', async () => {
+        const chatflow: any = { id: 'cf-1', name: 'Avl_Agent', flowData: 'LIVE', workspaceId: 'ws-1' }
+        const tag = { historyId: 'hist-tag' }
+        const tagSnapshot = { snapshotData: JSON.stringify({ flowData: 'TAGGED' }) }
+        const historyRepo = { findOneBy: jest.fn().mockResolvedValue(tagSnapshot) }
+        mockApp({
+            ChatFlow: { findBy: jest.fn().mockResolvedValue([chatflow]) },
+            FlowVersionTag: { findOneBy: jest.fn().mockResolvedValue(tag) },
+            FlowHistory: historyRepo
+        })
+
+        const out = await resolveChatflowReference('Avl_Agent@v3', 'ws-1')
+        expect(out.effectiveFlowData).toBe('TAGGED')
+        // Verify the tag's snapshot was loaded (by tag.historyId, not by version number)
+        expect(historyRepo.findOneBy).toHaveBeenCalledWith({ id: 'hist-tag' })
+    })
+
     it('throws 500 when tag exists but snapshot is missing', async () => {
         const chatflow = { id: 'cf-1', name: 'Avl_Agent', flowData: 'LIVE', workspaceId: 'ws-1' }
         const tag = { historyId: 'hist-orphan' }

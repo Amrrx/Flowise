@@ -38,7 +38,7 @@ import chatflowsApi from '@/api/chatflows'
 // utils
 import moment from 'moment'
 
-const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
+const HistoryDialog = ({ show, dialogProps, onCancel, onRestore, onPublishChange }) => {
     const theme = useTheme()
     const portalElement = document.getElementById('portal')
     const { confirm } = useConfirm()
@@ -55,7 +55,7 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
     const [latestVersion, setLatestVersion] = useState(null)
     const [reloadTrigger, setReloadTrigger] = useState(0)
 
-    const { entityType, entityId, entityName, currentVersion } = dialogProps || {}
+    const { entityType, entityId, entityName, currentVersion, publishedVersion } = dialogProps || {}
     const itemsPerPage = 10
 
     // Load history when dialog opens
@@ -137,6 +137,9 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
                 setHistoryItems([])
                 setLatestVersion(null)
                 setReloadTrigger((prev) => prev + 1)
+                if (historyItem.version === publishedVersion) {
+                    onPublishChange?.()
+                }
             } catch (error) {
                 console.error('Delete error:', error)
                 enqueueSnackbar({
@@ -168,9 +171,10 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
         try {
             await chatflowsApi.publishChatflow(entityId, item.version)
             enqueueSnackbar({
-                message: `Published v${item.version}`,
+                message: `Set v${item.version} as Published`,
                 options: { variant: 'success' }
             })
+            onPublishChange?.()
         } catch (error) {
             enqueueSnackbar({
                 message: `Publish failed: ${error?.response?.data?.message || error.message}`,
@@ -216,6 +220,7 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
                             {historyItems.map((item) => {
                                 const isCurrent = item.version === currentVersion
                                 const isLatest = item.version === latestVersion
+                                const isPublished = publishedVersion != null && item.version === publishedVersion
                                 return (
                                     <Paper key={`${item.id}-${item.version}-${currentPage}`} sx={{ mb: 1 }}>
                                         <ListItem>
@@ -229,6 +234,7 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
                                                         />
                                                         {isCurrent && <Chip label='Current' size='small' color='primary' />}
                                                         {isLatest && !isCurrent && <Chip label='Latest' size='small' color='secondary' />}
+                                                        {isPublished && <Chip label='Published' size='small' color='success' />}
                                                         <Typography variant='body2' sx={{ ml: 1 }}>
                                                             {item.changeDescription || 'No description'}
                                                         </Typography>
@@ -264,10 +270,17 @@ const HistoryDialog = ({ show, dialogProps, onCancel, onRestore }) => {
                                                         </IconButton>
                                                     </Tooltip>
 
-                                                    <Tooltip title='Publish this version to end users'>
-                                                        <IconButton size='small' onClick={() => handlePublishVersion(item)}>
-                                                            <IconRocket size={18} />
-                                                        </IconButton>
+                                                    <Tooltip title={isPublished ? 'Already Published' : 'Set as Published'}>
+                                                        <span>
+                                                            <IconButton
+                                                                size='small'
+                                                                onClick={() => handlePublishVersion(item)}
+                                                                disabled={isPublished}
+                                                                sx={{ opacity: isPublished ? 0.4 : 1 }}
+                                                            >
+                                                                <IconRocket size={18} />
+                                                            </IconButton>
+                                                        </span>
                                                     </Tooltip>
 
                                                     {!isCurrent && (

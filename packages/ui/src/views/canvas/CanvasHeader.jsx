@@ -250,7 +250,8 @@ const CanvasHeader = ({
                 entityType: 'CHATFLOW', // All canvas types use CHATFLOW entity type
                 entityId: chatflow.id,
                 entityName: chatflow.name || 'Untitled',
-                currentVersion: chatflow.currentHistoryVersion
+                currentVersion: chatflow.currentHistoryVersion,
+                publishedVersion: chatflow.publishedVersion
             })
             setHistoryDialogOpen(true)
         }
@@ -779,6 +780,7 @@ const CanvasHeader = ({
                 dialogProps={historyDialogProps}
                 onCancel={() => setHistoryDialogOpen(false)}
                 onRestore={onHistoryRestore}
+                onPublishChange={reloadChatflow}
             />
         </>
     )

@@ -677,7 +677,8 @@ const CustomAssistantConfigurePreview = () => {
                 entityType: 'ASSISTANT',
                 entityId: selectedCustomAssistant.id,
                 entityName: selectedCustomAssistant.name || selectedCustomAssistant.details?.name || 'Untitled',
-                currentVersion: selectedCustomAssistant.currentHistoryVersion
+                currentVersion: selectedCustomAssistant.currentHistoryVersion,
+                publishedVersion: selectedCustomAssistant.publishedVersion
             })
             setHistoryDialogOpen(true)
         }
@@ -1516,6 +1517,11 @@ const CustomAssistantConfigurePreview = () => {
                 dialogProps={historyDialogProps}
                 onCancel={() => setHistoryDialogOpen(false)}
                 onRestore={onHistoryRestore}
+                onPublishChange={() => {
+                    if (selectedCustomAssistant?.id) {
+                        getSpecificAssistantApi.request(selectedCustomAssistant.id)
+                    }
+                }}
             />
             <ConfirmDialog />
         </>

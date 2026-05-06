@@ -83,25 +83,41 @@ export async function resolveChatflowReference(
     }
 
     if (ref.kind === 'nameTag') {
+        const historyRepo = dataSource.getRepository(FlowHistory)
         const tagRepo = dataSource.getRepository(FlowVersionTag)
+
+        // 1. Try as a named tag first — user-defined tags win over version shortcuts.
         const tag = await tagRepo.findOneBy({
             entityType: 'CHATFLOW',
             entityId: chatflow.id,
             tagName: ref.tag,
             workspaceId: chatflow.workspaceId
         })
-        if (!tag) {
+
+        let snapshot: FlowHistory | null = null
+        if (tag) {
+            snapshot = await historyRepo.findOneBy({ id: tag.historyId })
+            if (!snapshot) {
+                throw new InternalFlowiseError(StatusCodes.INTERNAL_SERVER_ERROR, `Tag '${ref.tag}' references a missing snapshot`)
+            }
+        } else {
+            // 2. Numeric-version shortcut: `name@v<digits>` resolves directly to FlowHistory.version
+            //    so callers don't need to create a tag for one-off pinning.
+            const versionMatch = ref.tag.match(/^v(\d+)$/)
+            if (versionMatch) {
+                const version = Number(versionMatch[1])
+                snapshot = await historyRepo.findOneBy({ entityType: 'CHATFLOW', entityId: chatflow.id, version })
+            }
+        }
+
+        if (!snapshot) {
             throw new InternalFlowiseError(StatusCodes.NOT_FOUND, `Tag '${ref.tag}' not found on chatflow '${ref.name}'`)
         }
-        const historyRepo = dataSource.getRepository(FlowHistory)
-        const snapshot = await historyRepo.findOneBy({ id: tag.historyId })
-        if (!snapshot) {
-            throw new InternalFlowiseError(StatusCodes.INTERNAL_SERVER_ERROR, `Tag '${ref.tag}' references a missing snapshot`)
-        }
+
         const parsed = JSON.parse(snapshot.snapshotData)
         const effectiveFlowData = parsed.flowData ?? chatflow.flowData
         chatflow.flowData = effectiveFlowData
-        ;(chatflow as any).publishedVersion = null // prevent downstream resolveEffectiveFlowData from overriding our tag choice
+        ;(chatflow as any).publishedVersion = null // prevent downstream resolveEffectiveFlowData from overriding our tag/version choice
         return { chatflow, effectiveFlowData }
     }
 

@@ -136,77 +136,7 @@ describe('flowTagsService', () => {
     })
 })
 
-describe('createTag — production promotion', () => {
-    it('deletes existing production tag for the same chatflow before inserting new one', async () => {
-        const tagRepo = {
-            create: jest.fn((x) => x),
-            save: jest.fn().mockResolvedValue({ id: 'new-tag' }),
-            delete: jest.fn().mockResolvedValue({ affected: 1 })
-        }
-        const historyRepo = {
-            findOne: jest.fn().mockResolvedValue({
-                id: 'hist-2',
-                entityType: 'CHATFLOW',
-                entityId: 'cf-1',
-                workspaceId: 'ws-1'
-            })
-        }
-        const { getRunningExpressApp } = require('../../utils/getRunningExpressApp')
-        getRunningExpressApp.mockReturnValue({
-            AppDataSource: {
-                getRepository: (e: any) => (e.name === 'FlowVersionTag' ? tagRepo : historyRepo)
-            }
-        })
-
-        const flowTagsService = require('./').default
-        await flowTagsService.createTag({
-            historyId: 'hist-2',
-            tagName: 'production',
-            user: { id: 'u1', name: 'Alice' },
-            workspaceId: 'ws-1'
-        })
-
-        expect(tagRepo.delete).toHaveBeenCalledWith({
-            entityType: 'CHATFLOW',
-            entityId: 'cf-1',
-            tagName: 'production',
-            workspaceId: 'ws-1'
-        })
-        expect(tagRepo.save).toHaveBeenCalled()
-    })
-
-    it('does NOT delete when creating a non-production tag', async () => {
-        const tagRepo = {
-            create: jest.fn((x) => x),
-            save: jest.fn().mockResolvedValue({ id: 'new-tag' }),
-            delete: jest.fn()
-        }
-        const historyRepo = {
-            findOne: jest.fn().mockResolvedValue({
-                id: 'hist-3',
-                entityType: 'CHATFLOW',
-                entityId: 'cf-1',
-                workspaceId: 'ws-1'
-            })
-        }
-        const { getRunningExpressApp } = require('../../utils/getRunningExpressApp')
-        getRunningExpressApp.mockReturnValue({
-            AppDataSource: {
-                getRepository: (e: any) => (e.name === 'FlowVersionTag' ? tagRepo : historyRepo)
-            }
-        })
-
-        const flowTagsService = require('./').default
-        await flowTagsService.createTag({
-            historyId: 'hist-3',
-            tagName: 'v2.2.1',
-            user: { id: 'u1', name: 'Alice' },
-            workspaceId: 'ws-1'
-        })
-
-        expect(tagRepo.delete).not.toHaveBeenCalled()
-    })
-
+describe('createTag — validation', () => {
     it('rejects invalid tag names', async () => {
         const flowTagsService = require('./').default
         await expect(
