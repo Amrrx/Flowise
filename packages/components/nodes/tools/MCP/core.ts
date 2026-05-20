@@ -489,7 +489,7 @@ function createSchemaModel(
     }, {} as Record<string, ZodTypeAny>)
 
     // Add Flowise context fields to allow them through schema validation
-    schemaProperties['flowise_chatId'] = z.string().optional()
+    // schemaProperties['flowise_chatId'] = z.string().optional()
 
     return z.object(schemaProperties)
 }
