@@ -15,6 +15,8 @@ import { alpha } from '@mui/material/styles'
 //Const
 import { baseURL } from '@/store/constant'
 
+const DEFAULT_FOOTER = { text: 'Powered by', company: 'Afaqy', companyLink: 'https://afaqy.com' }
+
 // ==============================|| Chatbot ||============================== //
 
 const ChatbotFull = () => {
@@ -106,7 +108,12 @@ const ChatbotFull = () => {
                             chatflowid={chatflow.id}
                             apiHost={baseURL}
                             chatflowConfig={chatbotOverrideConfig}
-                            theme={{ chatWindow: chatbotTheme }}
+                            theme={{
+                                chatWindow: {
+                                    ...chatbotTheme,
+                                    footer: { ...DEFAULT_FOOTER, ...(chatbotTheme.footer || {}) }
+                                }
+                            }}
                         />
                     )}
                 </>
