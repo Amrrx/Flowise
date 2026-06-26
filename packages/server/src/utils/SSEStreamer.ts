@@ -291,6 +291,9 @@ export class SSEStreamer implements IServerSideEventStreamer {
         if (apiResponse.action) {
             metadataJson['action'] = typeof apiResponse.action === 'string' ? JSON.parse(apiResponse.action) : apiResponse.action
         }
+        if (apiResponse.sessionMemory) {
+            metadataJson['sessionMemory'] = apiResponse.sessionMemory
+        }
         if (Object.keys(metadataJson).length > 0) {
             this.streamCustomEvent(chatId, 'metadata', metadataJson)
         }

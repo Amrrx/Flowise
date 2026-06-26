@@ -449,6 +449,7 @@ export interface IServerSideEventStreamer {
     streamAbortEvent(chatId: string): void
     streamEndEvent(chatId: string): void
     streamUsageMetadataEvent(chatId: string, data: any): void
+    streamMetadataEvent(chatId: string, apiResponse: any): void
     // Enhanced MCP streaming methods
     addMcpConnection?(chatId: string, toolName?: string): void
     removeMcpConnection?(chatId: string, toolName?: string): void

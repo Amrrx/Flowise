@@ -53,6 +53,7 @@ import logger from './logger'
 import { getErrorMessage } from '../errors/utils'
 import { Execution } from '../database/entities/Execution'
 import { utilAddChatMessage } from './addChatMesage'
+import { getMemoryPolicy, writeRetainedToolResults, filterSessionMemory, maybeCompactConversation, accountContext } from './sessionMemory'
 import { CachePool } from '../CachePool'
 import { ChatMessage } from '../database/entities/ChatMessage'
 import { Telemetry } from './telemetry'
@@ -633,7 +634,7 @@ function getNodeInputConnections(edges: IReactFlowEdge[], nodeId: string): IReac
  * Analyzes node dependencies and sets up expected inputs
  */
 function setupNodeDependencies(nodeId: string, edges: IReactFlowEdge[], nodes: IReactFlowNode[]): IWaitingNode {
-    logger.info(`\n🔍 Analyzing dependencies for node: ${nodeId}`)
+    // logger.info(`\n🔍 Analyzing dependencies for node: ${nodeId}`)
     const inputConnections = getNodeInputConnections(edges, nodeId)
     const waitingNode: IWaitingNode = {
         nodeId,
@@ -1862,6 +1863,21 @@ export const executeAgentFlow = async ({
 
     const maxIterations = process.env.MAX_ITERATIONS ? parseInt(process.env.MAX_ITERATIONS) : 1000
 
+    // Session-memory: pre-turn full compaction (#7) — if the estimated context is over the
+    // configured threshold, summarize prior turns into a running summary so this turn (and the
+    // history load just below) proceeds on the compacted view. No-op unless configured/over.
+    try {
+        await maybeCompactConversation(
+            appDataSource,
+            getMemoryPolicy(overrideConfig),
+            { chatflowid, chatId, sessionId, chatType: chatType || (isInternal ? ChatType.INTERNAL : ChatType.EXTERNAL) },
+            { orgId, workspaceId, chatId, chatflowid, appDataSource, databaseEntities },
+            sseStreamer
+        )
+    } catch (e) {
+        logger.warn(`[server]: [session-memory] compaction skipped: ${getErrorMessage(e)}`)
+    }
+
     // Get chat history from ChatMessage table
     const pastChatHistory = (await appDataSource
         .getRepository(ChatMessage)
@@ -1875,7 +1891,9 @@ export const executeAgentFlow = async ({
             }
         })
         .then((messages) =>
-            messages.map((message) => {
+            // Session-memory: drop expired + micro-compact retained rows; the rest map normally —
+            // a `toolMessage` row carries flattened text and becomes a plain assistant turn.
+            filterSessionMemory(messages, getMemoryPolicy(overrideConfig)).map((message) => {
                 const mappedMessage: any = {
                     content: message.content,
                     role: message.role === 'userMessage' ? 'user' : 'assistant'
@@ -2349,6 +2367,40 @@ export const executeAgentFlow = async ({
         apiMessage.action = JSON.stringify(lastNodeOutput.humanInputAction)
 
     const chatMessage = await utilAddChatMessage(apiMessage, appDataSource)
+
+    // Session-memory retention: persist whitelisted tool results as durable, UI-hidden
+    // conversation blocks so the agent stops re-calling read-only tools every turn.
+    try {
+        await writeRetainedToolResults(
+            appDataSource,
+            getMemoryPolicy(overrideConfig),
+            lastNodeOutput?.usedTools,
+            {
+                chatflowid,
+                chatId,
+                sessionId,
+                chatType: apiMessage.chatType,
+                executionId: newExecution.id
+            },
+            { orgId, workspaceId, chatId, chatflowid, appDataSource, databaseEntities }
+        )
+    } catch (e) {
+        logger.warn(`[server]: [session-memory] retention write skipped: ${getErrorMessage(e)}`)
+    }
+
+    // P3 accounting (#8) → admin: emit the session's per-category token breakdown on the
+    // metadata channel (event:"metadata"), which the gateway captures into its admin event.
+    try {
+        if (sseStreamer) {
+            const memPolicy = getMemoryPolicy(overrideConfig)
+            const sessionRows = await appDataSource
+                .getRepository(ChatMessage)
+                .find({ where: { chatflowid, sessionId }, order: { createdDate: 'ASC' } })
+            sseStreamer.streamMetadataEvent(chatId, { sessionMemory: accountContext(filterSessionMemory(sessionRows, memPolicy)) })
+        }
+    } catch (e) {
+        logger.warn(`[server]: [session-memory] accounting emit skipped: ${getErrorMessage(e)}`)
+    }
 
     logger.debug(`[server]: Finished running agentflow ${chatflowid}`)
 

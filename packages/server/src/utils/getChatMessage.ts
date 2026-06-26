@@ -4,6 +4,7 @@ import { ChatMessage } from '../database/entities/ChatMessage'
 import { ChatMessageFeedback } from '../database/entities/ChatMessageFeedback'
 import { ChatFlow } from '../database/entities/ChatFlow'
 import { getRunningExpressApp } from '../utils/getRunningExpressApp'
+import { isConversationRole } from './sessionMemory'
 
 /**
  * Method that get chat messages.
@@ -118,7 +119,8 @@ export const utilGetChatMessage = async ({
         }
     })
 
-    return messages
+    // Session-memory rows (retained tool results / summaries) are context-only — hide from the UI.
+    return messages.filter((m) => isConversationRole(m.role))
 }
 
 async function handleFeedbackQuery(params: {
