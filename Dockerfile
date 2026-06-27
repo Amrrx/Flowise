@@ -17,7 +17,7 @@ RUN apk update && \
         cairo-dev \
         pango-dev \
         curl && \
-    npm install -g pnpm
+    npm install -g pnpm@10.26.0
 
 WORKDIR /usr/src/flowise
 
@@ -44,7 +44,7 @@ RUN apk update && \
         libc6-compat \
         chromium \
         curl && \
-    npm install -g pnpm
+    npm install -g pnpm@10.26.0
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
