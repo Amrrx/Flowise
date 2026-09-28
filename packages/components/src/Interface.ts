@@ -186,6 +186,7 @@ export interface IMessage {
 
 export interface IUsedTool {
     tool: string
+    toolCallId?: string
     toolInput: object
     toolOutput: string | object
     sourceDocuments?: ICommonObject[]

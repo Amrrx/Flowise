@@ -2128,6 +2128,7 @@ class Agent_Agentflow implements INode {
         if (response.tool_calls) {
             const formattedToolCalls = response.tool_calls.map((toolCall: any) => ({
                 tool: toolCall.name || 'tool',
+                toolCallId: toolCall.id,
                 toolInput: toolCall.args,
                 toolOutput: ''
             }))
@@ -2212,6 +2213,7 @@ class Agent_Agentflow implements INode {
         if (sseStreamer) {
             const formattedToolCalls = response.tool_calls.map((toolCall: any) => ({
                 tool: toolCall.name || 'tool',
+                toolCallId: toolCall.id,
                 toolInput: toolCall.args,
                 toolOutput: ''
             }))
@@ -2348,6 +2350,7 @@ class Agent_Agentflow implements INode {
                     // Track used tools
                     usedTools.push({
                         tool: toolCall.name,
+                        toolCallId: toolCall.id,
                         toolInput: toolInput ?? toolCall.args,
                         toolOutput
                     })
@@ -2370,6 +2373,7 @@ class Agent_Agentflow implements INode {
 
                     usedTools.push({
                         tool: selectedTool.name,
+                        toolCallId: toolCall.id,
                         toolInput,
                         toolOutput: '',
                         error: getErrorMessage(e)
@@ -2601,6 +2605,7 @@ class Agent_Agentflow implements INode {
         if (sseStreamer) {
             const formattedToolCalls = response.tool_calls.map((toolCall: any) => ({
                 tool: toolCall.name || 'tool',
+                toolCallId: toolCall.id,
                 toolInput: toolCall.args,
                 toolOutput: ''
             }))
@@ -2728,6 +2733,7 @@ class Agent_Agentflow implements INode {
                         // Track used tools
                         usedTools.push({
                             tool: toolCall.name,
+                            toolCallId: toolCall.id,
                             toolInput: toolInput ?? toolCall.args,
                             toolOutput
                         })
@@ -2750,6 +2756,7 @@ class Agent_Agentflow implements INode {
 
                         usedTools.push({
                             tool: selectedTool.name,
+                            toolCallId: toolCall.id,
                             toolInput,
                             toolOutput: '',
                             error: getErrorMessage(e)
