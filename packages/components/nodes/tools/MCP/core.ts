@@ -68,6 +68,7 @@ export class MCPToolkit extends BaseToolkit {
             await checkDenyList(this.serverParams.url)
             const mergedHeaders = { ...this.serverParams?.headers, ...injectHeaders }
             const headers = Object.keys(mergedHeaders).length > 0 ? mergedHeaders : undefined
+            const connectStartedAt = Date.now()
             try {
                 if (headers) {
                     transport = new StreamableHTTPClientTransport(baseUrl, {
@@ -79,7 +80,8 @@ export class MCPToolkit extends BaseToolkit {
                     transport = new StreamableHTTPClientTransport(baseUrl)
                 }
                 await client.connect(transport)
-            } catch (error) {
+            } catch (streamableError) {
+                const streamableFailedAfterMs = Date.now() - connectStartedAt
                 if (headers) {
                     transport = new SSEClientTransport(baseUrl, {
                         requestInit: {
@@ -103,7 +105,21 @@ export class MCPToolkit extends BaseToolkit {
                         }
                     })
                 }
-                await client.connect(transport)
+                try {
+                    await client.connect(transport)
+                } catch (sseError) {
+                    // Only the SSE error propagates, so record why streamable HTTP failed first.
+                    // Origin only; query and path scrubbed from the message — providers embed credentials in either.
+                    let message = String(streamableError?.message ?? streamableError)
+                    if (baseUrl.search) message = message.replaceAll(baseUrl.search, '[query]')
+                    if (baseUrl.pathname.length > 1) message = message.replaceAll(baseUrl.pathname, '[path]')
+                    console.error(
+                        `⚠️ [MCP Core] Streamable HTTP connect to ${baseUrl.origin} failed after ${streamableFailedAfterMs}ms:`,
+                        streamableError?.code ?? '',
+                        message
+                    )
+                    throw sseError
+                }
             }
         }
 
